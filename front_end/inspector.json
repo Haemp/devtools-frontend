@@ -9,7 +9,7 @@
         { "name": "protocol", "type": "autostart" },
         { "name": "host", "type": "autostart" },
         { "name": "common", "type": "autostart" },
-        { "name": "emulation", "type": "autostart" },
+        { "name": "emulation" },
         { "name": "workspace", "type": "autostart" },
         { "name": "bindings", "type": "autostart" },
         { "name": "preview" },

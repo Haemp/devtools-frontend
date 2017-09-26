@@ -504,7 +504,8 @@ Protocol.InspectorBackend._AgentPrototype = class {
      * @return {!Promise.<*>}
      */
     function sendMessagePromise(vararg) {
-      var params = Array.prototype.slice.call(arguments);
+      console.log('Arguments sent', arguments)
+      var params = Array.from(arguments).filter(arg => !!arg)//Array.prototype.slice.call(arguments);
       return Protocol.InspectorBackend._AgentPrototype.prototype._sendMessageToBackendPromise.call(
           this, domainAndMethod, signature, params);
     }

@@ -12,7 +12,7 @@ SDK.EmulationModel = class extends SDK.SDKModel {
     this._pageAgent = target.pageAgent();
     this._deviceOrientationAgent = target.deviceOrientationAgent();
     this._cssModel = target.model(SDK.CSSModel);
-    this._overlayModel = target.model(SDK.OverlayModel);
+    //this._overlayModel = target.model(SDK.OverlayModel);
     if (this._overlayModel)
       this._overlayModel.addEventListener(SDK.OverlayModel.Events.InspectModeWillBeToggled, this._updateTouch, this);
 
@@ -22,10 +22,10 @@ SDK.EmulationModel = class extends SDK.SDKModel {
     if (disableJavascriptSetting.get())
       this._emulationAgent.setScriptExecutionDisabled(true);
 
-    var mediaSetting = Common.moduleSetting('emulatedCSSMedia');
-    mediaSetting.addChangeListener(() => this._emulateCSSMedia(mediaSetting.get()));
-    if (mediaSetting.get())
-      this._emulateCSSMedia(mediaSetting.get());
+    // var mediaSetting = Common.moduleSetting('emulatedCSSMedia');
+    // mediaSetting.addChangeListener(() => this._emulateCSSMedia(mediaSetting.get()));
+    // if (mediaSetting.get())
+    //   this._emulateCSSMedia(mediaSetting.get());
 
     this._touchEnabled = false;
     this._touchMobile = false;

@@ -1643,7 +1643,6 @@ SDK.DOMModel = class extends SDK.SDKModel {
         callback.apply(this, arguments);
     }
     return wrapperFunction.bind(this);
->>>>>>> parent of e26a9a89... [DevTools] Consolidate overlay-related functionality in Overlay domain
   }
 
   markUndoableState() {
