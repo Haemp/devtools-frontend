@@ -28,7 +28,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /**
- * @implements {SDK.OverlayModel.Highlighter}
+ * @implements {SDK.DOMNodeHighlighter}
  * @unrestricted
  */
 Screencast.ScreencastView = class extends UI.VBox {
@@ -39,7 +39,6 @@ Screencast.ScreencastView = class extends UI.VBox {
     super();
     this._screenCaptureModel = screenCaptureModel;
     this._domModel = screenCaptureModel.target().model(SDK.DOMModel);
-    this._overlayModel = screenCaptureModel.target().model(SDK.OverlayModel);
     this._resourceTreeModel = screenCaptureModel.target().model(SDK.ResourceTreeModel);
     this._networkManager = screenCaptureModel.target().model(SDK.NetworkManager);
     this._inputModel = screenCaptureModel.target().model(Screencast.InputModel);
@@ -130,10 +129,16 @@ Screencast.ScreencastView = class extends UI.VBox {
         'jpeg', 80, Math.floor(Math.min(maxImageDimension, dimensions.width)),
         Math.floor(Math.min(maxImageDimension, dimensions.height)), undefined, this._screencastFrame.bind(this),
         this._screencastVisibilityChanged.bind(this));
-    for (var emulationModel of SDK.targetManager.models(SDK.EmulationModel))
-      emulationModel.overrideEmulateTouch(true);
-    if (this._overlayModel)
-      this._overlayModel.setHighlighter(this);
+// <<<<<<< HEAD
+//     for (var emulationModel of SDK.targetManager.models(SDK.EmulationModel))
+//       emulationModel.overrideEmulateTouch(true);
+//     if (this._overlayModel)
+//       this._overlayModel.setHighlighter(this);
+// =======
+    Emulation.MultitargetTouchModel.instance().setCustomTouchEnabled(true);
+    if (this._domModel)
+      this._domModel.setHighlighter(this);
+// >>>>>>> parent of e26a9a89... [DevTools] Consolidate overlay-related functionality in Overlay domain
   }
 
   _stopCasting() {
@@ -141,10 +146,16 @@ Screencast.ScreencastView = class extends UI.VBox {
       return;
     this._isCasting = false;
     this._screenCaptureModel.stopScreencast();
-    for (var emulationModel of SDK.targetManager.models(SDK.EmulationModel))
-      emulationModel.overrideEmulateTouch(false);
-    if (this._overlayModel)
-      this._overlayModel.setHighlighter(null);
+// <<<<<<< HEAD
+//     for (var emulationModel of SDK.targetManager.models(SDK.EmulationModel))
+//       emulationModel.overrideEmulateTouch(false);
+//     if (this._overlayModel)
+//       this._overlayModel.setHighlighter(null);
+// =======
+    Emulation.MultitargetTouchModel.instance().setCustomTouchEnabled(false);
+    if (this._domModel)
+      this._domModel.setHighlighter(null);
+// >>>>>>> parent of e26a9a89... [DevTools] Consolidate overlay-related functionality in Overlay domain
   }
 
   /**
@@ -240,13 +251,29 @@ Screencast.ScreencastView = class extends UI.VBox {
         Math.floor(position.y / this._pageScaleFactor + this._scrollOffsetY),
         Common.moduleSetting('showUAShadowDOM').get());
 
-    if (!node)
-      return;
-    if (event.type === 'mousemove') {
-      this.highlightDOMNode(node, this._inspectModeConfig);
-      this._domModel.overlayModel().nodeHighlightRequested(node.id);
-    } else if (event.type === 'click') {
-      Common.Revealer.reveal(node);
+// <<<<<<< HEAD
+//     if (!node)
+//       return;
+//     if (event.type === 'mousemove') {
+//       this.highlightDOMNode(node, this._inspectModeConfig);
+//       this._domModel.overlayModel().nodeHighlightRequested(node.id);
+//     } else if (event.type === 'click') {
+//       Common.Revealer.reveal(node);
+// =======
+    /**
+     * @param {?SDK.DOMNode} node
+     * @this {Screencast.ScreencastView}
+     */
+    function callback(node) {
+      if (!node)
+        return;
+      if (event.type === 'mousemove') {
+        this.highlightDOMNode(node, this._inspectModeConfig);
+        this._domModel.nodeHighlightRequested(node.id);
+      } else if (event.type === 'click') {
+        Common.Revealer.reveal(node);
+      }
+// >>>>>>> parent of e26a9a89... [DevTools] Consolidate overlay-related functionality in Overlay domain
     }
   }
 
@@ -314,7 +341,7 @@ Screencast.ScreencastView = class extends UI.VBox {
   /**
    * @override
    * @param {?SDK.DOMNode} node
-   * @param {?Protocol.Overlay.HighlightConfig} config
+   * @param {?Protocol.DOM.HighlightConfig} config
    * @param {!Protocol.DOM.BackendNodeId=} backendNodeId
    * @param {!Protocol.Runtime.RemoteObjectId=} objectId
    */
@@ -561,13 +588,14 @@ Screencast.ScreencastView = class extends UI.VBox {
 
   /**
    * @override
-   * @param {!Protocol.Overlay.InspectMode} mode
-   * @param {!Protocol.Overlay.HighlightConfig} config
-   * @return {!Promise}
+   * @param {!Protocol.DOM.InspectMode} mode
+   * @param {!Protocol.DOM.HighlightConfig} config
+   * @param {function(?Protocol.Error)=} callback
    */
-  setInspectMode(mode, config) {
-    this._inspectModeConfig = mode !== Protocol.Overlay.InspectMode.None ? config : null;
-    return Promise.resolve();
+  setInspectMode(mode, config, callback) {
+    this._inspectModeConfig = mode !== Protocol.DOM.InspectMode.None ? config : null;
+    if (callback)
+      callback(null);
   }
 
   /**

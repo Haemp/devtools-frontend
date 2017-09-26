@@ -33,42 +33,146 @@ Main.RenderingOptionsView = class extends UI.VBox {
     super(true);
     this.registerRequiredCSS('main/renderingOptions.css');
 
-    this._appendCheckbox(
-        Common.UIString('Paint flashing'),
-        Common.UIString('Highlights areas of the page (green) that need to be repainted'),
-        Common.moduleSetting('showPaintRects'));
-    this._appendCheckbox(
-        Common.UIString('Layer borders'), Common.UIString('Shows layer borders (orange/olive) and tiles (cyan)'),
-        Common.moduleSetting('showDebugBorders'));
-    this._appendCheckbox(
-        Common.UIString('FPS meter'),
-        Common.UIString('Plots frames per second, frame rate distribution, and GPU memory'),
-        Common.moduleSetting('showFPSCounter'));
-    this._appendCheckbox(
-        Common.UIString('Scrolling performance issues'),
-        Common.UIString(
+// <<<<<<< HEAD
+//     this._appendCheckbox(
+//         Common.UIString('Paint flashing'),
+//         Common.UIString('Highlights areas of the page (green) that need to be repainted'),
+//         Common.moduleSetting('showPaintRects'));
+//     this._appendCheckbox(
+//         Common.UIString('Layer borders'), Common.UIString('Shows layer borders (orange/olive) and tiles (cyan)'),
+//         Common.moduleSetting('showDebugBorders'));
+//     this._appendCheckbox(
+//         Common.UIString('FPS meter'),
+//         Common.UIString('Plots frames per second, frame rate distribution, and GPU memory'),
+//         Common.moduleSetting('showFPSCounter'));
+//     this._appendCheckbox(
+//         Common.UIString('Scrolling performance issues'),
+//         Common.UIString(
+// =======
+    /** @type {!Map.<string, !Element>} */
+    this._settings = new Map();
+
+    var options = [
+      {
+        label: Common.UIString('Paint Flashing'),
+        subtitle: Common.UIString('Highlights areas of the page (green) that need to be repainted'),
+        setterName: 'setShowPaintRects'
+      },
+      {
+        label: Common.UIString('Layer Borders'),
+        subtitle: Common.UIString('Shows layer borders (orange/olive) and tiles (cyan)'),
+        setterName: 'setShowDebugBorders'
+      },
+      {
+        label: Common.UIString('FPS Meter'),
+        subtitle: Common.UIString('Plots frames per second, frame rate distribution, and GPU memory'),
+        setterName: 'setShowFPSCounter'
+      },
+      {
+        label: Common.UIString('Scrolling Performance Issues'),
+        subtitle: Common.UIString(
+// >>>>>>> parent of e26a9a89... [DevTools] Consolidate overlay-related functionality in Overlay domain
             'Highlights elements (teal) that can slow down scrolling, including touch & wheel event handlers and other main-thread scrolling situations.'),
-        Common.moduleSetting('showScrollBottleneckRects'));
+        setterName: 'setShowScrollBottleneckRects'
+      }
+    ];
+    for (var i = 0; i < options.length; i++)
+      this._appendCheckbox(options[i].label, options[i].setterName, options[i].subtitle);
+
     this.contentElement.createChild('div').classList.add('panel-section-separator');
 
-    var mediaSetting = Common.moduleSetting('emulatedCSSMedia');
-    var mediaSelect = UI.SettingsUI.createControlForSetting(mediaSetting);
-    if (mediaSelect) {
-      var mediaRow = this.contentElement.createChild('span', 'media-row');
-      mediaRow.createChild('label').textContent = Common.UIString('Emulate CSS media');
-      mediaRow.createChild('p').textContent = Common.UIString('Forces media type for testing print and screen styles');
-      mediaRow.appendChild(mediaSelect);
-    }
+// <<<<<<< HEAD
+//     var mediaSetting = Common.moduleSetting('emulatedCSSMedia');
+//     var mediaSelect = UI.SettingsUI.createControlForSetting(mediaSetting);
+//     if (mediaSelect) {
+//       var mediaRow = this.contentElement.createChild('span', 'media-row');
+//       mediaRow.createChild('label').textContent = Common.UIString('Emulate CSS media');
+//       mediaRow.createChild('p').textContent = Common.UIString('Forces media type for testing print and screen styles');
+//       mediaRow.appendChild(mediaSelect);
+//     }
+// =======
+    var cssMediaSubtitle = Common.UIString('Forces media type for testing print and screen styles');
+    var checkboxLabel = UI.CheckboxLabel.create(Common.UIString('Emulate CSS Media'), false, cssMediaSubtitle);
+    this._mediaCheckbox = checkboxLabel.checkboxElement;
+    this._mediaCheckbox.addEventListener('click', this._mediaToggled.bind(this), false);
+    this.contentElement.appendChild(checkboxLabel);
+
+    var mediaRow = this.contentElement.createChild('div', 'media-row');
+    this._mediaSelect = mediaRow.createChild('select', 'chrome-select');
+    this._mediaSelect.appendChild(new Option(Common.UIString('print'), 'print'));
+    this._mediaSelect.appendChild(new Option(Common.UIString('screen'), 'screen'));
+    this._mediaSelect.addEventListener('change', this._mediaToggled.bind(this), false);
+    this._mediaSelect.disabled = true;
+
+    SDK.targetManager.observeTargets(this, SDK.Target.Capability.Browser);
+  }
+
+  /**
+   * @return {!Main.RenderingOptionsView}
+   */
+  static instance() {
+    if (!Main.RenderingOptionsView._instanceObject)
+      Main.RenderingOptionsView._instanceObject = new Main.RenderingOptionsView();
+    return Main.RenderingOptionsView._instanceObject;
+// >>>>>>> parent of e26a9a89... [DevTools] Consolidate overlay-related functionality in Overlay domain
   }
 
   /**
    * @param {string} label
-   * @param {string} subtitle
-   * @param {!Common.Setting} setting
+   * @param {string} setterName
+   * @param {string=} subtitle
    */
-  _appendCheckbox(label, subtitle, setting) {
+  _appendCheckbox(label, setterName, subtitle) {
     var checkboxLabel = UI.CheckboxLabel.create(label, false, subtitle);
-    UI.SettingsUI.bindCheckbox(checkboxLabel.checkboxElement, setting);
+    this._settings.set(setterName, checkboxLabel.checkboxElement);
+    checkboxLabel.checkboxElement.addEventListener('click', this._settingToggled.bind(this, setterName));
     this.contentElement.appendChild(checkboxLabel);
   }
+
+  /**
+   * @param {string} setterName
+   */
+  _settingToggled(setterName) {
+    var enabled = this._settings.get(setterName).checked;
+    for (var target of SDK.targetManager.targets(SDK.Target.Capability.Browser))
+      target.renderingAgent()[setterName](enabled);
+  }
+
+  /**
+   * @override
+   * @param {!SDK.Target} target
+   */
+  targetAdded(target) {
+    for (var setterName of this._settings.keysArray()) {
+      if (this._settings.get(setterName).checked)
+        target.renderingAgent()[setterName](true);
+    }
+    if (this._mediaCheckbox.checked)
+      this._applyPrintMediaOverride(target);
+  }
+
+  _mediaToggled() {
+    this._mediaSelect.disabled = !this._mediaCheckbox.checked;
+    var targets = SDK.targetManager.targets(SDK.Target.Capability.Browser);
+    for (var target of targets)
+      this._applyPrintMediaOverride(target);
+  }
+
+  /**
+   * @param {!SDK.Target} target
+   */
+  _applyPrintMediaOverride(target) {
+    target.emulationAgent().setEmulatedMedia(this._mediaCheckbox.checked ? this._mediaSelect.value : '');
+    var cssModel = target.model(SDK.CSSModel);
+    if (cssModel)
+      cssModel.mediaQueryResultChanged();
+  }
+
+  /**
+   * @override
+   * @param {!SDK.Target} target
+   */
+  targetRemoved(target) {
+  }
+// >>>>>>> parent of e26a9a89... [DevTools] Consolidate overlay-related functionality in Overlay domain
 };

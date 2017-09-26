@@ -119,7 +119,7 @@ Components.DOMPresentationUtils.linkifyNodeReference = function(node, idref, too
 
   link.addEventListener('click', Common.Revealer.reveal.bind(Common.Revealer, node, undefined), false);
   link.addEventListener('mouseover', node.highlight.bind(node, undefined, undefined), false);
-  link.addEventListener('mouseleave', () => SDK.OverlayModel.hideDOMNodeHighlight(), false);
+  link.addEventListener('mouseleave', SDK.DOMModel.hideDOMNodeHighlight.bind(SDK.DOMModel), false);
 
   return root;
 };

@@ -487,10 +487,16 @@ Emulation.DeviceModeModel = class extends Common.Object {
               this._uaSetting.get() === Emulation.DeviceModeModel.UA.Mobile,
           this._uaSetting.get() === Emulation.DeviceModeModel.UA.Mobile);
     }
-    var overlayModel = this._emulationModel ? this._emulationModel.overlayModel() : null;
-    if (overlayModel)
-      overlayModel.setShowViewportSizeOnResize(this._type === Emulation.DeviceModeModel.Type.None);
-    this.dispatchEventToListeners(Emulation.DeviceModeModel.Events.Updated);
+// <<<<<<< HEAD
+//     var overlayModel = this._emulationModel ? this._emulationModel.overlayModel() : null;
+//     if (overlayModel)
+//       overlayModel.setShowViewportSizeOnResize(this._type === Emulation.DeviceModeModel.Type.None);
+//     this.dispatchEventToListeners(Emulation.DeviceModeModel.Events.Updated);
+// =======
+    if (this._target)
+      this._target.renderingAgent().setShowViewportSizeOnResize(this._type === Emulation.DeviceModeModel.Type.None);
+    this._updateCallback.call(null);
+// >>>>>>> parent of e26a9a89... [DevTools] Consolidate overlay-related functionality in Overlay domain
   }
 
   /**
@@ -649,9 +655,13 @@ Emulation.DeviceModeModel = class extends Common.Object {
 
     if (!this._emulatedPageSize)
       this._calculateAndEmulate(false);
-    var overlayModel = this._emulationModel ? this._emulationModel.overlayModel() : null;
-    if (overlayModel)
-      overlayModel.setShowViewportSizeOnResize(false);
+// <<<<<<< HEAD
+//     var overlayModel = this._emulationModel ? this._emulationModel.overlayModel() : null;
+//     if (overlayModel)
+//       overlayModel.setShowViewportSizeOnResize(false);
+// =======
+    this._target.renderingAgent().setShowViewportSizeOnResize(false);
+// >>>>>>> parent of e26a9a89... [DevTools] Consolidate overlay-related functionality in Overlay domain
 
     var pageSize = fullSize ? new UI.Size(metrics.contentWidth, metrics.contentHeight) : this._emulatedPageSize;
     var promises = [];
