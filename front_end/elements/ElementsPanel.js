@@ -36,6 +36,7 @@
  */
 Elements.ElementsPanel = class extends UI.Panel {
   constructor() {
+    console.log('Elements panel created');
     super('elements');
     this.registerRequiredCSS('elements/elementsPanel.css');
 
@@ -199,6 +200,7 @@ Elements.ElementsPanel = class extends UI.Panel {
    * @override
    */
   focus() {
+    console.log('ElementsPanel focused')
     if (this._treeOutlines.length)
       this._treeOutlines[0].focus();
   }
@@ -708,14 +710,15 @@ Elements.ElementsPanel = class extends UI.Panel {
     node = Common.moduleSetting('showUAShadowDOM').get() ? node : this._leaveUserAgentShadowDOM(node);
     node.highlightForTwoSeconds();
 
-    return UI.viewManager.showView('elements').then(() => {
+    return new Promise((res, rej) => {
       this.selectDOMNode(node, true);
       delete this._omitDefaultSelection;
 
       if (!this._notFirstInspectElement)
         InspectorFrontendHost.inspectElementCompleted();
       this._notFirstInspectElement = true;
-    });
+      res()
+    })
   }
 
   _showUAShadowDOMChanged() {
