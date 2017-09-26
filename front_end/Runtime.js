@@ -1074,6 +1074,7 @@ Runtime.Experiment = class {
 {
   (function parseQueryParameters() {
     var queryParams = Runtime.queryParamsString();
+    console.warn('Query Parameters are', queryParams);
     if (!queryParams)
       return;
     var params = queryParams.substring(1).split('&');

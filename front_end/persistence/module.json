@@ -2,7 +2,8 @@
     "dependencies": [
         "bindings",
         "workspace",
-        "components"
+        "components",
+        "preview"
     ],
     "extensions": [
         {

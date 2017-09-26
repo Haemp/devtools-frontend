@@ -609,6 +609,7 @@
     ],
     "dependencies": [
         "components",
+        "common",
         "source_frame",
         "snippets",
         "extensions",
@@ -618,7 +619,10 @@
         "color_picker",
         "event_listeners",
         "object_ui",
-        "formatter"
+        "formatter",
+        "preview",
+        "elements"
+
     ],
     "scripts": [
         "AddSourceMapURLDialog.js",

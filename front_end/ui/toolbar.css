@@ -221,6 +221,7 @@ select.toolbar-item[data-keyboard-focus="true"]:focus > * {
 
 /* Input */
 
+.toolbar{ display:none; }
 .toolbar-input {
     width: 120px;
     height: 20px;

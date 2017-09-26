@@ -66,42 +66,39 @@ Persistence.IsolatedFileSystemManager = class extends Common.Object {
    * @return {!Promise<!Array<!Persistence.IsolatedFileSystem>>}
    */
   _requestFileSystems() {
-    var fulfill;
-    var promise = new Promise(f => fulfill = f);
-    InspectorFrontendHost.events.addEventListener(
-        InspectorFrontendHostAPI.Events.FileSystemsLoaded, onFileSystemsLoaded, this);
-    InspectorFrontendHost.requestFileSystems();
-    return promise;
 
-    /**
-     * @param {!Common.Event} event
-     * @this {Persistence.IsolatedFileSystemManager}
-     */
-    function onFileSystemsLoaded(event) {
-      var fileSystems = /** @type {!Array.<!Persistence.IsolatedFileSystemManager.FileSystem>} */ (event.data);
+    console.log('Requesting available filesystems');
+    return fetch('http://localhost:1234/filesystems', {method: 'GET'}).then(/** @param {Response} response */ (response) => {
+      return response.json();
+    }).then(/** @type Persistence.IsolatedFileSystemManager.FileSystem[] */(fileSystems) => {
+
+      console.log('Available filesystems', fileSystems);
       var promises = [];
       for (var i = 0; i < fileSystems.length; ++i)
         promises.push(this._innerAddFileSystem(fileSystems[i], false));
-      Promise.all(promises).then(onFileSystemsAdded);
-    }
 
-    /**
-     * @param {!Array<?Persistence.IsolatedFileSystem>} fileSystems
-     */
-    function onFileSystemsAdded(fileSystems) {
-      fulfill(fileSystems.filter(fs => !!fs));
-    }
+      return Promise.all(promises)
+    })
   }
 
-  addFileSystem() {
-    InspectorFrontendHost.addFileSystem('');
+
+  /**
+   * Adding a new project to the selector
+   */
+  async addFileSystem() {
+
+    // show file dialog
+    const selectedFileSystem = await Preview.ElectronBackground.showFolderSelectionDialog()
+    this._innerAddFileSystem(selectedFileSystem, true)
   }
 
   /**
    * @param {!Persistence.IsolatedFileSystem} fileSystem
    */
   removeFileSystem(fileSystem) {
-    InspectorFrontendHost.removeFileSystem(fileSystem.embedderPath());
+
+    this._onFileSystemRemoved({data: fileSystem.embedderPath()})
+    //InspectorFrontendHost.removeFileSystem(fileSystem.embedderPath());
   }
 
   /**
@@ -117,6 +114,8 @@ Persistence.IsolatedFileSystemManager = class extends Common.Object {
    * @return {!Promise<?Persistence.IsolatedFileSystem>}
    */
   _innerAddFileSystem(fileSystem, dispatchEvent) {
+
+    console.log('Creating IsolatedFileSystems', fileSystem);
     var embedderPath = fileSystem.fileSystemPath;
     var fileSystemURL = Common.ParsedURL.platformPathToURL(fileSystem.fileSystemPath);
     var promise = Persistence.IsolatedFileSystem.create(

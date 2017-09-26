@@ -6,7 +6,10 @@ var http = require('http');
 var path = require('path');
 var parseURL = require('url').parse;
 
+console.log('Chromium path is', process.env.CHROMIUM_COMMIT);
 var utils = require('../utils');
+
+const CHROMIUM_COMMIT = "a106f0abbf69dad349d4aaf4bcc4f5d376dd2377"
 
 const remoteDebuggingPort = parseInt(process.env.REMOTE_DEBUGGING_PORT, 10) || 9222;
 const serverPort = parseInt(process.env.PORT, 10) || 8090;
@@ -39,8 +42,10 @@ function requestHandler(request, response) {
     sendResponse(500, '500 - Internal Server Error');
   }
 
-  var absoluteFilePath = path.join(process.cwd(), filePath);
+  var absoluteFilePath = path.join(devtoolsFolder, filePath);
+  //console.log('Absolut file path', absoluteFilePath);
   if (!path.resolve(absoluteFilePath).startsWith(devtoolsFolder)) {
+    console.log('File', filePath);
     console.log(`File requested is outside of devtools folder: ${devtoolsFolder}`);
     sendResponse(403, `403 - Access denied. File requested is outside of devtools folder: ${devtoolsFolder}`);
     return;
@@ -90,8 +95,10 @@ function proxy(filePath) {
     return null;
   if (localProtocolPath && filePath === '/front_end/InspectorBackendCommands.js')
     return serveLocalProtocolFile();
-  if (process.env.CHROMIUM_COMMIT)
-    return onProxyFileURL(proxyFilePathToURL[filePath](process.env.CHROMIUM_COMMIT));
+  if (CHROMIUM_COMMIT){
+    //console.log('Proxying to commit', CHROMIUM_COMMIT);
+    return onProxyFileURL(proxyFilePathToURL[filePath](CHROMIUM_COMMIT));
+  }
   return utils.fetch(`http://localhost:${remoteDebuggingPort}/json/version`)
       .then(onBrowserMetadata)
       .then(onProxyFileURL);
@@ -125,6 +132,8 @@ function proxy(filePath) {
   }
 
   function onProxyFileURL(proxyFileURL) {
+
+    console.log('Proxying file', proxyFileURL);
     if (proxyFileCache.has(proxyFileURL))
       return Promise.resolve(proxyFileCache.get(proxyFileURL));
     return utils.fetch(proxyFileURL).then(cacheProxyFile.bind(null, proxyFileURL)).catch(onMissingFile);

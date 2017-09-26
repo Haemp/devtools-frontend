@@ -36,13 +36,11 @@ Persistence.IsolatedFileSystem = class {
    * @param {!Persistence.IsolatedFileSystemManager} manager
    * @param {string} path
    * @param {string} embedderPath
-   * @param {!DOMFileSystem} domFileSystem
    */
-  constructor(manager, path, embedderPath, domFileSystem) {
+  constructor(manager, path, embedderPath) {
     this._manager = manager;
     this._path = path;
     this._embedderPath = embedderPath;
-    this._domFileSystem = domFileSystem;
     this._excludedFoldersSetting = Common.settings.createLocalSetting('workspaceExcludedFolders', {});
     /** @type {!Set<string>} */
     this._excludedFolders = new Set(this._excludedFoldersSetting.get()[path] || []);
@@ -62,12 +60,11 @@ Persistence.IsolatedFileSystem = class {
    * @return {!Promise<?Persistence.IsolatedFileSystem>}
    */
   static create(manager, path, embedderPath, name, rootURL) {
-    var domFileSystem = InspectorFrontendHost.isolatedFileSystem(name, rootURL);
-    if (!domFileSystem)
-      return Promise.resolve(/** @type {?Persistence.IsolatedFileSystem} */ (null));
+    // Create filesystem stubb
+    var fileSystem = new Persistence.IsolatedFileSystem(manager, path, embedderPath);
 
-    var fileSystem = new Persistence.IsolatedFileSystem(manager, path, embedderPath, domFileSystem);
-    return fileSystem._initializeFilePaths()
+    // Populate filesystem inner values
+    return fileSystem._initializeFilePaths(embedderPath)
         .then(() => fileSystem)
         .catchException(/** @type {?Persistence.IsolatedFileSystem} */ (null));
   }
@@ -85,26 +82,8 @@ Persistence.IsolatedFileSystem = class {
    * @return {!Promise<?{modificationTime: !Date, size: number}>}
    */
   getMetadata(path) {
-    var fulfill;
-    var promise = new Promise(f => fulfill = f);
-    this._domFileSystem.root.getFile(path, undefined, fileEntryLoaded, errorHandler);
-    return promise;
-
-    /**
-     * @param {!FileEntry} entry
-     */
-    function fileEntryLoaded(entry) {
-      entry.getMetadata(fulfill, errorHandler);
-    }
-
-    /**
-     * @param {!FileError} error
-     */
-    function errorHandler(error) {
-      var errorMessage = Persistence.IsolatedFileSystem.errorMessage(error);
-      console.error(errorMessage + ' when getting file metadata \'' + path);
-      fulfill(null);
-    }
+    console.log('Getting metadata for', path);
+    return Preview.ElectronFileSystemBackend.getFileMetaData(path);
   }
 
   /**
@@ -136,42 +115,31 @@ Persistence.IsolatedFileSystem = class {
   }
 
   /**
-   * @return {!Promise}
+   * Creates a flat file tree with all the files accessible
+   *
+   * These paths should not have a prepended slash - just 'folder/file.js'
+   * These are only a listing of file paths - no folders should be listed in the
+   * _initialFilePaths list.
+   *
+   * @param {String} path the absolute path that we want to list the entries from.
+   * @return {!Promise<String[]>}
    */
-  _initializeFilePaths() {
-    var fulfill;
-    var promise = new Promise(x => fulfill = x);
-    var pendingRequests = 1;
-    var boundInnerCallback = innerCallback.bind(this);
-    this._requestEntries('', boundInnerCallback);
-    return promise;
-
-    /**
-     * @param {!Array.<!FileEntry>} entries
-     * @this {Persistence.IsolatedFileSystem}
-     */
-    function innerCallback(entries) {
-      for (var i = 0; i < entries.length; ++i) {
-        var entry = entries[i];
+  _initializeFilePaths(absolutePath) {
+    return Preview.ElectronFileSystemBackend.getFlatFileListing(absolutePath).then(/** @param {BackendFileSystemEntry[]} paths */(entries) => {
+      entries.forEach(entry => {
         if (!entry.isDirectory) {
-          if (this._isFileExcluded(entry.fullPath))
-            continue;
-          this._initialFilePaths.add(entry.fullPath.substr(1));
+          if (!this._isFileExcluded(entry.fullPath)){
+            this._initialFilePaths.add(entry.fullPath);
+          }
         } else {
           if (entry.fullPath.endsWith('/.git')) {
             var lastSlash = entry.fullPath.lastIndexOf('/');
             var parentFolder = entry.fullPath.substring(1, lastSlash);
             this._initialGitFolders.add(parentFolder);
           }
-          if (this._isFileExcluded(entry.fullPath + '/'))
-            continue;
-          ++pendingRequests;
-          this._requestEntries(entry.fullPath, boundInnerCallback);
         }
-      }
-      if ((--pendingRequests === 0))
-        fulfill();
-    }
+      })
+    })
   }
 
   /**
@@ -180,142 +148,34 @@ Persistence.IsolatedFileSystem = class {
    * @param {function(?string)} callback
    */
   createFile(path, name, callback) {
-    var newFileIndex = 1;
-    if (!name)
-      name = 'NewFile';
-    var nameCandidate;
+    console.log('Creating a file', path, name);
 
-    this._domFileSystem.root.getDirectory(path, undefined, dirEntryLoaded.bind(this), errorHandler.bind(this));
-
-    /**
-     * @param {!DirectoryEntry} dirEntry
-     * @this {Persistence.IsolatedFileSystem}
-     */
-    function dirEntryLoaded(dirEntry) {
-      var nameCandidate = name;
-      if (newFileIndex > 1)
-        nameCandidate += newFileIndex;
-      ++newFileIndex;
-      dirEntry.getFile(nameCandidate, {create: true, exclusive: true}, fileCreated, fileCreationError.bind(this));
-
-      function fileCreated(entry) {
-        callback(entry.fullPath.substr(1));
-      }
-
-      /**
-       * @this {Persistence.IsolatedFileSystem}
-       */
-      function fileCreationError(error) {
-        if (error.name === 'InvalidModificationError') {
-          dirEntryLoaded.call(this, dirEntry);
-          return;
-        }
-        var errorMessage = Persistence.IsolatedFileSystem.errorMessage(error);
-        console.error(
-            errorMessage + ' when testing if file exists \'' + (this._path + '/' + path + '/' + nameCandidate) + '\'');
-        callback(null);
-      }
-    }
-
-    /**
-     * @this {Persistence.IsolatedFileSystem}
-     */
-    function errorHandler(error) {
-      var errorMessage = Persistence.IsolatedFileSystem.errorMessage(error);
-      var filePath = this._path + '/' + path;
-      if (nameCandidate)
-        filePath += '/' + nameCandidate;
-      console.error(errorMessage + ' when getting content for file \'' + (filePath) + '\'');
-      callback(null);
-    }
+    Preview.ElectronFileSystemBackend.createFile(this._embedderPath, path + '/new-file.js').then((response) => {
+      callback(response.filePath);
+    }).catch((err) => {
+      console.error('Error creating file', err);
+      callback()
+    });
   }
 
   /**
    * @param {string} path
    */
   deleteFile(path) {
-    this._domFileSystem.root.getFile(path, undefined, fileEntryLoaded.bind(this), errorHandler.bind(this));
 
-    /**
-     * @param {!FileEntry} fileEntry
-     * @this {Persistence.IsolatedFileSystem}
-     */
-    function fileEntryLoaded(fileEntry) {
-      fileEntry.remove(fileEntryRemoved, errorHandler.bind(this));
-    }
-
-    function fileEntryRemoved() {
-    }
-
-    /**
-     * @param {!FileError} error
-     * @this {Persistence.IsolatedFileSystem}
-     * @suppress {checkTypes}
-     * TODO(jsbell): Update externs replacing FileError with DOMException. https://crbug.com/496901
-     */
-    function errorHandler(error) {
-      var errorMessage = Persistence.IsolatedFileSystem.errorMessage(error);
-      console.error(errorMessage + ' when deleting file \'' + (this._path + '/' + path) + '\'');
-    }
   }
 
   /**
-   * @param {string} path
-   * @return {!Promise<?string>}
-   */
-  requestFileContentPromise(path) {
-    var fulfill;
-    var promise = new Promise(x => fulfill = x);
-    this.requestFileContent(path, fulfill);
-    return promise;
-  }
-
-  /**
-   * @param {string} path
+   * @param {string} path - path relative to the root fileSystem - prepended slash
    * @param {function(?string)} callback
    */
   requestFileContent(path, callback) {
-    this._domFileSystem.root.getFile(path, undefined, fileEntryLoaded.bind(this), errorHandler.bind(this));
 
-    /**
-     * @param {!FileEntry} entry
-     * @this {Persistence.IsolatedFileSystem}
-     */
-    function fileEntryLoaded(entry) {
-      entry.file(fileLoaded, errorHandler.bind(this));
-    }
+    Preview.ElectronFileSystemBackend.getFileContents(this._embedderPath + path).then((fileContent) => {
+        callback(fileContent);
+    }).catch((err) => {
 
-    /**
-     * @param {!Blob} file
-     */
-    function fileLoaded(file) {
-      var reader = new FileReader();
-      reader.onloadend = readerLoadEnd;
-      if (Persistence.IsolatedFileSystem.ImageExtensions.has(Common.ParsedURL.extractExtension(path)))
-        reader.readAsDataURL(file);
-      else
-        reader.readAsText(file);
-    }
-
-    /**
-     * @this {!FileReader}
-     */
-    function readerLoadEnd() {
-      /** @type {?string} */
-      var string = null;
-      try {
-        string = /** @type {string} */ (this.result);
-      } catch (e) {
-        console.error('Can\'t read file: ' + path + ': ' + e);
-      }
-      callback(string);
-    }
-
-    /**
-     * @this {Persistence.IsolatedFileSystem}
-     */
-    function errorHandler(error) {
-      if (error.name === 'NotFoundError') {
+      if (err.name === 'NotFoundError') {
         callback(null);
         return;
       }
@@ -323,7 +183,7 @@ Persistence.IsolatedFileSystem = class {
       var errorMessage = Persistence.IsolatedFileSystem.errorMessage(error);
       console.error(errorMessage + ' when getting content for file \'' + (this._path + '/' + path) + '\'');
       callback(null);
-    }
+    })
   }
 
   /**
@@ -332,41 +192,10 @@ Persistence.IsolatedFileSystem = class {
    * @param {function()} callback
    */
   setFileContent(path, content, callback) {
-    Host.userMetrics.actionTaken(Host.UserMetrics.Action.FileSavedInWorkspace);
-    this._domFileSystem.root.getFile(path, {create: true}, fileEntryLoaded.bind(this), errorHandler.bind(this));
 
-    /**
-     * @param {!FileEntry} entry
-     * @this {Persistence.IsolatedFileSystem}
-     */
-    function fileEntryLoaded(entry) {
-      entry.createWriter(fileWriterCreated.bind(this), errorHandler.bind(this));
-    }
-
-    /**
-     * @param {!FileWriter} fileWriter
-     * @this {Persistence.IsolatedFileSystem}
-     */
-    function fileWriterCreated(fileWriter) {
-      fileWriter.onerror = errorHandler.bind(this);
-      fileWriter.onwriteend = fileWritten;
-      var blob = new Blob([content], {type: 'text/plain'});
-      fileWriter.write(blob);
-
-      function fileWritten() {
-        fileWriter.onwriteend = callback;
-        fileWriter.truncate(blob.size);
-      }
-    }
-
-    /**
-     * @this {Persistence.IsolatedFileSystem}
-     */
-    function errorHandler(error) {
-      var errorMessage = Persistence.IsolatedFileSystem.errorMessage(error);
-      console.error(errorMessage + ' when setting content for file \'' + (this._path + '/' + path) + '\'');
-      callback();
-    }
+    Preview.ElectronFileSystemBackend.setFileContents(this._embedderPath + path, content).then(() => {
+        callback()
+    });
   }
 
   /**
@@ -375,124 +204,11 @@ Persistence.IsolatedFileSystem = class {
    * @param {function(boolean, string=)} callback
    */
   renameFile(path, newName, callback) {
-    newName = newName ? newName.trim() : newName;
-    if (!newName || newName.indexOf('/') !== -1) {
-      callback(false);
-      return;
-    }
-    var fileEntry;
-    var dirEntry;
 
-    this._domFileSystem.root.getFile(path, undefined, fileEntryLoaded.bind(this), errorHandler.bind(this));
-
-    /**
-     * @param {!FileEntry} entry
-     * @this {Persistence.IsolatedFileSystem}
-     */
-    function fileEntryLoaded(entry) {
-      if (entry.name === newName) {
-        callback(false);
-        return;
-      }
-
-      fileEntry = entry;
-      fileEntry.getParent(dirEntryLoaded.bind(this), errorHandler.bind(this));
-    }
-
-    /**
-     * @param {!Entry} entry
-     * @this {Persistence.IsolatedFileSystem}
-     */
-    function dirEntryLoaded(entry) {
-      dirEntry = entry;
-      dirEntry.getFile(newName, null, newFileEntryLoaded, newFileEntryLoadErrorHandler.bind(this));
-    }
-
-    /**
-     * @param {!FileEntry} entry
-     */
-    function newFileEntryLoaded(entry) {
-      callback(false);
-    }
-
-    /**
-     * @this {Persistence.IsolatedFileSystem}
-     */
-    function newFileEntryLoadErrorHandler(error) {
-      if (error.name !== 'NotFoundError') {
-        callback(false);
-        return;
-      }
-      fileEntry.moveTo(dirEntry, newName, fileRenamed, errorHandler.bind(this));
-    }
-
-    /**
-     * @param {!FileEntry} entry
-     */
-    function fileRenamed(entry) {
-      callback(true, entry.name);
-    }
-
-    /**
-     * @this {Persistence.IsolatedFileSystem}
-     */
-    function errorHandler(error) {
-      var errorMessage = Persistence.IsolatedFileSystem.errorMessage(error);
-      console.error(errorMessage + ' when renaming file \'' + (this._path + '/' + path) + '\' to \'' + newName + '\'');
-      callback(false);
-    }
-  }
-
-  /**
-   * @param {!DirectoryEntry} dirEntry
-   * @param {function(!Array.<!FileEntry>)} callback
-   */
-  _readDirectory(dirEntry, callback) {
-    var dirReader = dirEntry.createReader();
-    var entries = [];
-
-    function innerCallback(results) {
-      if (!results.length) {
-        callback(entries.sort());
-      } else {
-        entries = entries.concat(toArray(results));
-        dirReader.readEntries(innerCallback, errorHandler);
-      }
-    }
-
-    function toArray(list) {
-      return Array.prototype.slice.call(list || [], 0);
-    }
-
-    dirReader.readEntries(innerCallback, errorHandler);
-
-    function errorHandler(error) {
-      var errorMessage = Persistence.IsolatedFileSystem.errorMessage(error);
-      console.error(errorMessage + ' when reading directory \'' + dirEntry.fullPath + '\'');
-      callback([]);
-    }
-  }
-
-  /**
-   * @param {string} path
-   * @param {function(!Array.<!FileEntry>)} callback
-   */
-  _requestEntries(path, callback) {
-    this._domFileSystem.root.getDirectory(path, undefined, innerCallback.bind(this), errorHandler);
-
-    /**
-     * @param {!DirectoryEntry} dirEntry
-     * @this {Persistence.IsolatedFileSystem}
-     */
-    function innerCallback(dirEntry) {
-      this._readDirectory(dirEntry, callback);
-    }
-
-    function errorHandler(error) {
-      var errorMessage = Persistence.IsolatedFileSystem.errorMessage(error);
-      console.error(errorMessage + ' when requesting entry \'' + path + '\'');
-      callback([]);
-    }
+    Preview.ElectronFileSystemBackend
+      .renameFile(this._embedderPath + path, newName)
+      .then(res => callback(true, newName))
+      .catch(err => callback(false))
   }
 
   _saveExcludedFolders() {

@@ -55,12 +55,36 @@ Sources.SourcesPanel = class extends UI.Panel {
     this._debuggerPausedMessage = new Sources.DebuggerPausedMessage();
 
     const initialDebugSidebarWidth = 225;
+
+    // Main widget encapsulating the whole inner sources tab
+    // this has the navigator, sources and debugger in the left
+    // content view
+    this._previewSplitWidget = new UI.SplitWidget(true, true, 'previewSplitViewState', initialDebugSidebarWidth);
+    this._previewSplitWidget.show(this.element);
+
+    // now we need a new split pane inside the sidebar of the
+    // previewSplitWidget
+    this._innerPreviewSplitWidget = new UI.SplitWidget(false, true, 'innerPreviewSplitViewState', initialDebugSidebarWidth)
+    this._previewSplitWidget.setSidebarWidget(this._innerPreviewSplitWidget);
+
+    // inside the innerPreviewSplit widget we will place the preview in the main
+    // frame and a tabbed pane in the second one.
+    this._sourcesPreviewWidget = new Preview.PreviewSandbox();
+    this._innerPreviewSplitWidget.setMainWidget(this._sourcesPreviewWidget);
+
+    // create a source view for the settings files
+    this._settingsSourcesView = new Elements.ElementsPanel();
+    this._innerPreviewSplitWidget.setSidebarWidget(this._settingsSourcesView)
+
+    // _splitWidget -> Dual view with Debugger and sources
     this._splitWidget = new UI.SplitWidget(true, true, 'sourcesPanelSplitViewState', initialDebugSidebarWidth);
     this._splitWidget.enableShowModeSaving();
-    this._splitWidget.show(this.element);
+    this._previewSplitWidget.setMainWidget(this._splitWidget);
 
     // Create scripts navigator
     const initialNavigatorWidth = 225;
+
+    // editorView -> Navigator + Source editor
     this.editorView = new UI.SplitWidget(true, false, 'sourcesPanelNavigatorSplitViewState', initialNavigatorWidth);
     this.editorView.enableShowModeSaving();
     this.editorView.element.tabIndex = 0;
@@ -1029,6 +1053,9 @@ Sources.SourcesPanel = class extends UI.Panel {
     this._sidebarPaneStack.widget().show(vbox.element);
     this._sidebarPaneStack.widget().element.appendChild(this._debuggerPausedMessage.element());
     vbox.element.appendChild(this._debugToolbar.element);
+
+    const divEl = document.createElement('div');
+    vbox.element.appendChild(divEl);
 
     if (this._threadsSidebarPane)
       this._sidebarPaneStack.showView(this._threadsSidebarPane);

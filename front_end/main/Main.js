@@ -286,8 +286,13 @@ Main.Main = class {
     Main.Main.timeEnd('Main._showAppUI');
   }
 
-  _initializeTarget() {
+  async _initializeTarget() {
     Main.Main.time('Main._initializeTarget');
+    // Here we want to wait for the webview window to initialize - before we can connect to it.
+    console.log('awaiting webview ready...');
+    const instanceId = await webViewReady();
+    Runtime._queryParamsObject.ws = "localhost:9222/devtools/page/" + instanceId
+
     SDK.targetManager.connectToMainTarget(webSocketConnectionLost);
 
     InspectorFrontendHost.readyForTest();

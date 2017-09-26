@@ -19,6 +19,7 @@
         "SegmentedRange.js",
         "Throttler.js",
         "Trie.js",
+        "Dialog.js",
         "UIString.js",
         "ModuleExtensionInterfaces.js",
         "CharacterIdMap.js"

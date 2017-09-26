@@ -1,0 +1,9 @@
+{
+  "dependencies": [
+    "components",
+    "console"
+  ],
+  "scripts": [
+    "Preview.js"
+  ]
+}

@@ -632,6 +632,17 @@ Sources.NavigatorView = class extends UI.VBox {
   }
 
   /**
+   * @param {!Workspace.Project} project
+   * @param {string} path
+   * @param {!Workspace.UISourceCode=} uiSourceCode
+   */
+  _handleContextMenuRun(project, uiSourceCode) {
+    // clean up the path from a file URL to filesystem
+    const absoluteFilePath = uiSourceCode.contentURL().replace('file://', '')
+    Preview.PreviewModel.runFile(absoluteFilePath);
+  }
+
+  /**
    * @param {!Sources.NavigatorUISourceCodeTreeNode} node
    */
   _handleContextMenuRename(node) {
@@ -676,6 +687,12 @@ Sources.NavigatorView = class extends UI.VBox {
       contextMenu.appendItem(
           Common.UIString('Make a copy\u2026'), this._handleContextMenuCreate.bind(this, project, '', uiSourceCode));
       contextMenu.appendItem(Common.UIString('Delete'), this._handleContextMenuDelete.bind(this, uiSourceCode));
+
+      /**
+       * @ironchanges
+       */
+      contextMenu.appendItem(Common.UIString('Run'), this._handleContextMenuRun.bind(this, project, uiSourceCode))
+      contextMenu.appendItem(Common.UIString('New folder'), this._handleContextMenuCreateFolder.bind(this, project, uiSourceCode));
       contextMenu.appendSeparator();
     }
 
@@ -699,6 +716,7 @@ Sources.NavigatorView = class extends UI.VBox {
       return;
 
     contextMenu.appendItem(Common.UIString('New file'), this._handleContextMenuCreate.bind(this, project, path));
+    contextMenu.appendItem(Common.UIString('New folder'), this._handleContextMenuCreateFolder.bind(this, project, path));
     contextMenu.appendItem(Common.UIString('Exclude folder'), this._handleContextMenuExclude.bind(this, project, path));
 
     function removeFolder() {
@@ -713,6 +731,38 @@ Sources.NavigatorView = class extends UI.VBox {
       contextMenu.appendItem(Common.UIString('Remove folder from workspace'), removeFolder);
 
     contextMenu.show();
+  }
+
+  _handleContextMenuCreateFolder(project, path){
+    const embedderPath = project._fileSystem.embedderPath();
+    // show a popup dialog to enter the name of the folder
+    /** @type {Dialog.Dialog} */
+    const dialog = document.createElement('i-dialog');
+    document.body.appendChild(dialog)
+    dialog.setModal(true)
+    dialog.path = embedderPath
+    dialog.title = 'Create new folder'
+
+    dialog.addEventListener('save', (e) => {
+      const folderPath = e.data;
+      Preview.ElectronFileSystemBackend.createFolder(folderPath)
+        .then(() => {
+          removeDialog()
+          this.create(project, folderPath.replace(embedderPath+'/', ''))
+        })
+        .catch((err) => {
+          Common.console.addMessage('We could not add a new folder with that name', Common.Console.MessageLevel.Error)
+          removeDialog();
+        })
+    })
+
+    dialog.addEventListener('cancel', (event) => {
+        removeDialog();
+    })
+
+    function removeDialog(){
+      dialog.remove();
+    }
   }
 
   /**

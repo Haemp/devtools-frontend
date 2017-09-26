@@ -7,9 +7,50 @@
 <html>
 <head>
     <meta http-equiv="content-type" content="text/html; charset=utf-8">
-    <meta http-equiv="Content-Security-Policy" content="object-src 'none'; script-src 'self' 'unsafe-eval' https://chrome-devtools-frontend.appspot.com">
+    <script>
+    function webViewReady(){
+      return new Promise((res) => {
+
+        function fetchList(){
+          fetchTargetsList()
+            .then(localhostTarget => res(localhostTarget.id))
+            .catch(() => {
+              setTimeout(() => {
+                fetchList()
+              }, 500)
+            })
+        }
+        fetchList()
+      })
+    }
+
+    function fetchTargetsList(){
+      console.log('Fetching targets list');
+      return fetch('http://localhost:9222/json/list').then(_ => _.json()).then((targetList) => {
+        const localhostTarget = targetList.filter(target => target.url.includes('localhost:8081')).pop()
+        if(localhostTarget) return Promise.resolve(localhostTarget)
+        else return Promise.reject()
+      });
+    }
+
+    const {ipcRenderer} = require('electron')
+    ipcRenderer.on('sourcechange', () => {
+      console.log('devtools.html: ipcRenderer incoming change');
+      const evt = new Event('sourcechange');
+      document.dispatchEvent(evt);
+    });
+
+    ipcRenderer.on('builderror', (sender, error) => {
+      console.log('devtools.html: ipcRenderer incoming change');
+      const evt = new Event('builderror');
+      evt.data = error;
+      document.dispatchEvent(evt);
+    });
+  </script>
+  <!--<meta http-equiv="Content-Security-Policy" content="object-src 'none'; script-src 'self' 'unsafe-eval' https://chrome-devtools-frontend.appspot.com http://localhost:8081/">-->
     <script type="text/javascript" src="Runtime.js"></script>
     <script type="text/javascript" src="inspector.js"></script>
 </head>
 <body class="undocked" id="-blink-dev-tools"></body>
+
 </html>

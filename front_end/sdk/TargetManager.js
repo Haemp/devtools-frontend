@@ -361,6 +361,8 @@ SDK.TargetManager = class extends Common.Object {
   _createMainConnection(params) {
     var wsParam = Runtime.queryParam('ws');
     var wssParam = Runtime.queryParam('wss');
+
+    console.log('Target manager',wsParam, wssParam, InspectorFrontendHost.isHostedMode());
     if (wsParam || wssParam) {
       var ws = wsParam ? `ws://${wsParam}` : `wss://${wssParam}`;
       this._mainConnection = new SDK.WebSocketConnection(ws, this._webSocketConnectionLostCallback, params);
