@@ -40,10 +40,11 @@
       document.dispatchEvent(evt);
     });
 
-    ipcRenderer.on('builderror', (sender, error) => {
-      console.log('devtools.html: ipcRenderer incoming change');
+    ipcRenderer.on('builderror', (sender, errorMessage) => {
+      console.log('devtools.html: BuildError', errorMessage);
+
       const evt = new Event('builderror');
-      evt.data = error;
+      evt.data = errorMessage;
       document.dispatchEvent(evt);
     });
   </script>

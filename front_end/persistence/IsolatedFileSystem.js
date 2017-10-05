@@ -149,8 +149,15 @@ Persistence.IsolatedFileSystem = class {
    */
   createFile(path, name, callback) {
     console.log('Creating a file', path, name);
+    let relativeFilePath;
+    const file = 'new-file.js';
+    if(path){
+      relativeFilePath = path + '/' + file;
+    }else{
+      relativeFilePath = file;
+    }
 
-    Preview.ElectronFileSystemBackend.createFile(this._embedderPath, path + '/new-file.js').then((response) => {
+    Preview.ElectronFileSystemBackend.createFile(this._embedderPath, relativeFilePath).then((response) => {
       callback(response.filePath);
     }).catch((err) => {
       console.error('Error creating file', err);

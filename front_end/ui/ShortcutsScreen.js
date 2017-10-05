@@ -51,8 +51,8 @@ UI.ShortcutsScreen = class {
 
     elementsSection.addAlternateKeys(
         UI.ShortcutsScreen.ElementsPanelShortcuts.EditAttribute, Common.UIString('Edit attribute'));
-    elementsSection.addAlternateKeys(
-        UI.ShortcutsScreen.ElementsPanelShortcuts.HideElement, Common.UIString('Hide element'));
+    // elementsSection.addAlternateKeys(
+    //     UI.ShortcutsScreen.ElementsPanelShortcuts.HideElement, Common.UIString('Hide element'));
     elementsSection.addAlternateKeys(
         UI.ShortcutsScreen.ElementsPanelShortcuts.ToggleEditAsHTML, Common.UIString('Toggle edit as HTML'));
 

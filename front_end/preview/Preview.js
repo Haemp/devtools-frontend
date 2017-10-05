@@ -16,13 +16,58 @@ Preview;
  */
 class PreviewModel{
 
+  constructor(){
+
+  }
+
+  _assignBinding(event){
+    const networkSourceCode = event.data;
+
+    // add binding for the main entry file
+    if(networkSourceCode.name() === this._activeUiSourceCode.name() && networkSourceCode.origin().includes('webpack://')){
+      const baseEntryFileSystemPath = Persistence.FileSystemWorkspaceBinding.fileSystemPath(this._activeUiSourceCode.project().id())
+      Persistence.fileSystemMapping.addMappingForResource(
+        networkSourceCode.url(),
+        baseEntryFileSystemPath,
+        this._activeUiSourceCode.url()
+      )
+    }
+
+    // attempt to bind any source file that is being pulled in from the localhost:8081 domain
+    // to any file directly in root of the entryfile folder
+    if(networkSourceCode.origin().includes('localhost:8081')){
+
+      // get parent project for the selected entryFile
+      const parentProject = this._activeUiSourceCode.project();
+
+      // check if there are any files in the parent project
+      // with the same name as the ones pulled in from
+      // the network
+      const foundMatchUiSource = parentProject.uiSourceCodes().find((uiSource) => {
+        return uiSource.name() === networkSourceCode.name()
+      })
+
+      if(foundMatchUiSource){
+        Persistence.fileSystemMapping.addMappingForResource(
+          networkSourceCode.url(),
+          Persistence.FileSystemWorkspaceBinding.fileSystemPath(foundMatchUiSource.project().id()),
+          foundMatchUiSource.url()
+        )
+      }
+    }
+  }
+
   /**
    *
-   * @param {String} filePath
+   * @param {Workspace.UISourceCode} uiSourceCode
    * @returns {Promise<IronSettings>}
    */
-  async runFile(filePath){
-    this._activeFile = filePath
+  async runFile(uiSourceCode){
+    const filePath = uiSourceCode.contentURL().replace('file://', '')
+    this._activeUiSourceCode = uiSourceCode;
+
+    Workspace.workspace.removeEventListener(Workspace.Workspace.Events.UISourceCodeAdded, this._assignBinding, this);
+    Workspace.workspace.addEventListener(Workspace.Workspace.Events.UISourceCodeAdded, this._assignBinding, this);
 
     // sets the active file and in return we get
     // a formated filesystem to be added
@@ -32,6 +77,12 @@ class PreviewModel{
     // clean up old iron folder filesystems
     if(this._entryFileFileSystem)
       Persistence.isolatedFileSystemManager.removeFileSystem(this._entryFileFileSystem)
+
+    // find the project listing source maps - this is the one
+    // that will contain the uiSourceCode for the compiled files
+    const networkProject = Workspace.workspace.projects().filter((project) => {
+      return project._id === 'jsSourceMaps::main';
+    }).pop()
 
     // Add the filesystem - this will trigger all the panels to update to show the new
     // filesystem
@@ -65,7 +116,7 @@ Preview.PreviewSandbox = class extends UI.Widget {
     });
 
     document.addEventListener('builderror', (e) => {
-      Common.console.addMessage(e.data.message, Common.Console.MessageLevel.Error)
+      Common.console.addMessage(e.data, Common.Console.MessageLevel.Error)
     })
   }
 

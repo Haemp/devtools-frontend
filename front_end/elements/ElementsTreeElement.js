@@ -524,10 +524,10 @@ Elements.ElementsTreeElement = class extends UI.TreeElement {
     }
 
     contextMenu.appendSeparator();
-    menuItem = contextMenu.appendCheckboxItem(
-        Common.UIString('Hide element'), treeOutline.toggleHideElement.bind(treeOutline, this._node),
-        treeOutline.isToggledToHidden(this._node));
-    menuItem.setShortcut(UI.shortcutRegistry.shortcutTitleForAction('elements.hide-element'));
+    // menuItem = contextMenu.appendCheckboxItem(
+    //     Common.UIString('Hide element'), treeOutline.toggleHideElement.bind(treeOutline, this._node),
+    //     treeOutline.isToggledToHidden(this._node));
+    // menuItem.setShortcut(UI.shortcutRegistry.shortcutTitleForAction('elements.hide-element'));
 
     if (isEditable)
       contextMenu.appendItem(Common.UIString('Delete element'), this.remove.bind(this));

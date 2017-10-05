@@ -1,7 +1,8 @@
 {
   "dependencies": [
     "components",
-    "console"
+    "console",
+    "workspace"
   ],
   "scripts": [
     "Preview.js"

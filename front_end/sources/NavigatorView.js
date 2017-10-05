@@ -637,9 +637,7 @@ Sources.NavigatorView = class extends UI.VBox {
    * @param {!Workspace.UISourceCode=} uiSourceCode
    */
   _handleContextMenuRun(project, uiSourceCode) {
-    // clean up the path from a file URL to filesystem
-    const absoluteFilePath = uiSourceCode.contentURL().replace('file://', '')
-    Preview.PreviewModel.runFile(absoluteFilePath);
+    Preview.PreviewModel.runFile(uiSourceCode);
   }
 
   /**

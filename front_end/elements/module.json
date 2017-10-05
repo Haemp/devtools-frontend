@@ -157,19 +157,6 @@
         },
         {
             "type": "@UI.ActionDelegate",
-            "actionId": "elements.hide-element",
-            "contextTypes": [
-                "Elements.ElementsPanel"
-            ],
-            "className": "Elements.ElementsActionDelegate",
-            "bindings": [
-                {
-                    "shortcut": "H"
-                }
-            ]
-        },
-        {
-            "type": "@UI.ActionDelegate",
             "actionId": "elements.edit-as-html",
             "contextTypes": [
                 "Elements.ElementsPanel"
