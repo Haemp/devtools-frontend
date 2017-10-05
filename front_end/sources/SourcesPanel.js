@@ -39,7 +39,7 @@ Sources.SourcesPanel = class extends UI.Panel {
         this._handleDrop.bind(this));
 
     this._workspace = Workspace.workspace;
-
+    this.setHideOnDetach();
     this._togglePauseAction =
         /** @type {!UI.Action }*/ (UI.actionRegistry.action('debugger.toggle-pause'));
     this._stepOverAction =
