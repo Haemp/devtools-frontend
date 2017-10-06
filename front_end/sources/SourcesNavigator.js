@@ -33,6 +33,9 @@ Sources.SourcesNavigatorView = class extends Sources.NavigatorView {
   constructor() {
     super();
     SDK.targetManager.addEventListener(SDK.TargetManager.Events.InspectedURLChanged, this._inspectedURLChanged, this);
+
+    const projectHeader = document.createElement('ir-project-header')
+    this.contentElement.insertBefore(projectHeader, this.contentElement.children[0]) // insert at top
   }
 
   /**

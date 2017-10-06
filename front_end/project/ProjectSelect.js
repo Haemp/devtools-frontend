@@ -1,35 +1,49 @@
+/** @global */
+Project = (Project);
+
+
+/**
+ * @dependency Project.ProjectModel
+ */
+
 class ProjectSelect extends Simply.Component{
     static get template(){
         return `
             <style>
-                :host{
-                    display: block;
-                    position: absolute;
-                    width: 100%;
-                    height: 100%;
-                    z-index: 99;
-                    background-color: #ccc;
-                }
+              .container{
+                  display: block;
+                  position: absolute;
+                  width: 100%;
+                  height: 100%;
+                  z-index: 99;
+                  background-color: #ccc;
+              }
             </style>
-            <ul>
+            <div class="container" show="!this.activeProject">
+              <ul>
                 <li (click)="this.selectProject(project)" each="project in this.previousProjects">
-                    {{ project.fileSystemPath }}
+                  {{ project.fileSystemPath }}
                 </li>
                 <li (click)="this.createNewProject()">Create new Project</li>
-            </ul>
+              </ul>
+            </div>
         `
     }
 
     static get props(){
         return [
-            'previousProjects'
+            'previousProjects',
+            'activeProject'
         ]
     }
 
     async connectedCallback(){
 
-        const previousProjects = await Preview.ElectronFileSystemBackend.getFileSystems()
-        this.previousProjects = previousProjects;
+        Project.ProjectModel.addEventListener('change', () => {
+            this.activeProject = Project.ProjectModel.getActiveProject();
+        })
+
+        this.previousProjects = await Preview.ElectronFileSystemBackend.getFileSystems()
     }
 
     /**
@@ -53,18 +67,11 @@ class ProjectSelect extends Simply.Component{
      */
     async selectProject(project){
 
-        await Preview.ElectronFileSystemBackend.selectProject(project)
-        const event = new Event('projectselect')
-        event.data = project;
-        document.dispatchEvent(event);
+        Project.ProjectModel.setActiveProject(project);
 
         // hide the project view
-        this.hide();
-        Persistence.isolatedFileSystemManager.addFileSystemByPath(project)
-    }
 
-    hide(){
-      this.style.display = 'none';
+        Persistence.isolatedFileSystemManager.addFileSystemByPath(project)
     }
 }
 
