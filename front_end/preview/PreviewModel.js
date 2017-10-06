@@ -155,6 +155,22 @@ class ElectronFileSystemBackend {
 
 Preview.ElectronFileSystemBackend = new ElectronFileSystemBackend()
 
+Preview.Utils = {
+
+  /**
+   * @param path
+   * @param name
+   * @returns {Persistence.IsolatedFileSystemManager.FileSystem}
+   */
+  formatPathAsFileSystem(path, name){
+    return {
+      fileSystemName: name || 'defaultFileSystem',
+      fileSystemPath: path,
+      rootUrl: 'file://' + path
+    }
+  }
+}
+
 
 class ElectronBackground{
   /**

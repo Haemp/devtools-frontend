@@ -41,7 +41,7 @@ class ProjectSelect extends Simply.Component{
         const fileSystem = await Preview.ElectronBackground.showFolderSelectionDialog()
 
         // set project based on the folder selected
-        return selectProject(fileSystem.fileSystemPath)
+        return this.selectProject(Preview.Utils.formatPathAsFileSystem(fileSystem.fileSystemPath))
     }
 
     /**
