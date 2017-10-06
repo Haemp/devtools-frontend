@@ -133,24 +133,7 @@ class ElectronFileSystemBackend {
     })
   }
 
-  /**
-   * @return {Promise<BackendFileSystemEntry[]>}
-   */
-  getFileSystems(){
-    return fetch(BACKEND_HOST + '/filesystems').then(
-      /**
-       * @param {Response} response
-       **/
-      (response) => response.json()
-    )
-  }
 
-
-  selectProject(projectPath){
-    return fetch(BACKEND_HOST + '/project/active?projectPath='+projectPath, {
-      method: 'PUT'
-    })
-  }
 }
 
 Preview.ElectronFileSystemBackend = new ElectronFileSystemBackend()

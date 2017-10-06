@@ -86,7 +86,7 @@ Persistence.IsolatedFileSystemManager = class extends Common.Object {
    * @param {Persistence.IsolatedFileSystemManager.FileSystem} fileSystem
    * @returns {Promise.<void>}
    */
-  addFileSystemByPath(fileSystem){
+  addFileSystemByFileSystem(fileSystem){
     this._innerAddFileSystem(fileSystem, true)
   }
 
@@ -107,14 +107,15 @@ Persistence.IsolatedFileSystemManager = class extends Common.Object {
   removeFileSystem(fileSystem) {
 
     this._onFileSystemRemoved({data: fileSystem.embedderPath()})
-    //InspectorFrontendHost.removeFileSystem(fileSystem.embedderPath());
   }
 
   removeFileSystemByName(filesystemUrl){
     const fileSystem = this.fileSystems().find((fileSystem) => {
         return fileSystem.path() === filesystemUrl;
     })
-    this.removeFileSystem(fileSystem)
+
+    if(fileSystem)
+      this.removeFileSystem(fileSystem)
   }
 
   /**
