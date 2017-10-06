@@ -48,7 +48,7 @@ Persistence.FileSystemMapping = class extends Common.Object {
       fileSystemManager.addEventListener(
           Persistence.IsolatedFileSystemManager.Events.FileSystemRemoved, this._fileSystemRemoved, this),
     ];
-    fileSystemManager.waitForFileSystems().then(this._fileSystemsLoaded.bind(this));
+    //fileSystemManager.waitForFileSystems().then(this._fileSystemsLoaded.bind(this));
   }
 
   /**

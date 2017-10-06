@@ -59,7 +59,7 @@ Persistence.IsolatedFileSystemManager = class extends Common.Object {
 
     this._initExcludePatterSetting();
 
-    this._fileSystemsLoadedPromise = this._requestFileSystems();
+    //this._fileSystemsLoadedPromise = this._requestFileSystems();
   }
 
   /**
@@ -79,6 +79,15 @@ Persistence.IsolatedFileSystemManager = class extends Common.Object {
 
       return Promise.all(promises)
     })
+  }
+
+  /**
+   *
+   * @param {Persistence.IsolatedFileSystemManager.FileSystem} fileSystem
+   * @returns {Promise.<void>}
+   */
+  addFileSystemByPath(fileSystem){
+    this._innerAddFileSystem(fileSystem, true)
   }
 
 

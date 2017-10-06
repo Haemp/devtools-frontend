@@ -1,0 +1,9 @@
+{
+  "scripts": [
+    "../node_modules/simply.js/simply.min.js",
+    "ProjectSelect.js"
+  ],
+  "dependencies": [
+    "preview"
+  ]
+}

@@ -5,6 +5,7 @@
     "workspace"
   ],
   "scripts": [
+    "PreviewModel.js",
     "Preview.js"
   ]
 }

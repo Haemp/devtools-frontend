@@ -55,6 +55,8 @@ function requestHandler(request, response) {
 
   function fsExistsCallback(fileExists) {
     if (!fileExists) {
+      console.log('File', filePath);
+      console.log(`File requested is outside of devtools folder: ${devtoolsFolder}`);
       console.log(`Cannot find file ${absoluteFilePath}`);
       sendResponse(404, '404 - File not found');
       return;

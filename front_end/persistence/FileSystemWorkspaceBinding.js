@@ -49,7 +49,7 @@ Persistence.FileSystemWorkspaceBinding = class {
     ];
     /** @type {!Map.<string, !Persistence.FileSystemWorkspaceBinding.FileSystem>} */
     this._boundFileSystems = new Map();
-    this._isolatedFileSystemManager.waitForFileSystems().then(this._onFileSystemsLoaded.bind(this));
+    //this._isolatedFileSystemManager.waitForFileSystems().then(this._onFileSystemsLoaded.bind(this));
   }
 
   /**
