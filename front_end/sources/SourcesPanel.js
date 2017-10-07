@@ -73,6 +73,7 @@ Sources.SourcesPanel = class extends UI.Panel {
     this._innerPreviewSplitWidget.setMainWidget(this._sourcesPreviewWidget);
 
     // create a source view for the settings files
+    // this should be a tabbed view
     this._settingsSourcesView = new Elements.ElementsPanel();
     this._innerPreviewSplitWidget.setSidebarWidget(this._settingsSourcesView)
 

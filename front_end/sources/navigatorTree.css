@@ -100,3 +100,7 @@
 :host{
     overflow-y: auto;
 }
+
+/* Iron Overrides to remove the localhost resources list in the filesystem viewer */
+.parent.navigator-frame-tree-item{ display:none; }
+.parent.navigator-frame-tree-item + ol.children.expanded { display:none; }
