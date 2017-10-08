@@ -330,10 +330,13 @@ UI.TreeElement = class {
     this._boundOnBlur = this._onBlur.bind(this);
 
     this._listItemNode = createElement('li');
+
     this._titleElement = this._listItemNode.createChild('span', 'tree-element-title');
     this._listItemNode.treeElement = this;
-    if (title)
+    if (title){
+      this._listItemNode.classList.add(title)
       this.title = title;
+    }
     this._listItemNode.addEventListener('mousedown', this._handleMouseDown.bind(this), false);
     this._listItemNode.addEventListener('click', this._treeElementToggled.bind(this), false);
     this._listItemNode.addEventListener('dblclick', this._handleDoubleClick.bind(this), false);
@@ -342,6 +345,7 @@ UI.TreeElement = class {
     this._childrenListNode = createElement('ol');
     this._childrenListNode.parentTreeElement = this;
     this._childrenListNode.classList.add('children');
+    //this._childrenListNode.classList.add(title 7)
     UI.ARIAUtils.markAsGroup(this._childrenListNode);
 
     this._hidden = false;

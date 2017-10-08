@@ -2,10 +2,12 @@
   "dependencies": [
     "components",
     "console",
-    "workspace"
+    "workspace",
+    "common"
   ],
   "scripts": [
+    "Preview.js",
     "PreviewModel.js",
-    "Preview.js"
+    "PreviewToolsPane.js"
   ]
 }

@@ -21,6 +21,7 @@ class ProjectModel extends HTMLElement{
 
     this.activeProject = project;
     this.dispatchEvent(new Event('change'))
+    document.dispatchEvent(new Event('projectchange'))
   }
 
   getActiveProject(){

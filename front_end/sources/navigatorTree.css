@@ -102,5 +102,7 @@
 }
 
 /* Iron Overrides to remove the localhost resources list in the filesystem viewer */
+.navigator-fs-tree-item.project-id-entryFile{ display:none; }
+.navigator-fs-tree-item.project-id-entryFile + ol.children.expanded { display:none; }
 .parent.navigator-frame-tree-item{ display:none; }
 .parent.navigator-frame-tree-item + ol.children.expanded { display:none; }

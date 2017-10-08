@@ -1497,6 +1497,7 @@ Sources.NavigatorFolderTreeNode = class extends Sources.NavigatorTreeNode {
         Persistence.persistence.filePathHasBindings(absoluteFileSystemPath) :
         true;
     this._treeElement.listItemElement.classList.toggle('has-mapped-files', hasMappedFiles);
+    this._treeElement.listItemElement.classList.add('has-mapped-files', hasMappedFiles);
   }
 
   /**
@@ -1633,6 +1634,9 @@ Sources.NavigatorGroupTreeNode = class extends Sources.NavigatorTreeNode {
   constructor(navigatorView, project, id, type, title) {
     super(id, type);
     this._project = project;
+    if(project._fileSystem)
+      this._name = project._fileSystem._name;
+
     this._navigatorView = navigatorView;
     this._title = title;
     this.populate();
@@ -1666,6 +1670,10 @@ Sources.NavigatorGroupTreeNode = class extends Sources.NavigatorTreeNode {
   }
 
   updateTitle() {
+
+    if(this._name)
+      this._treeElement.listItemElement.classList.toggle('project-id-' + this._name, true);
+
     if (!this._treeElement || this._project.type() !== Workspace.projectTypes.FileSystem)
       return;
     if (!Runtime.experiments.isEnabled('persistence2')) {

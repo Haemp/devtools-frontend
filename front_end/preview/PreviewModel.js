@@ -134,6 +134,15 @@ class ElectronFileSystemBackend {
   }
 
 
+  deleteFile(filePath){
+    return fetch(BACKEND_HOST + '/file?filePath='+filePath, {method: 'DELETE'}).then((res) => {
+      if(res.status === 200){
+        return res.json();
+      }else{
+        return Promise.reject(res.json())
+      }
+    })
+  }
 }
 
 Preview.ElectronFileSystemBackend = new ElectronFileSystemBackend()

@@ -19,10 +19,12 @@ if(typeof Preview === "undefined"){
  * @description
  * @property {Persistence.IsolatedFileSystem} _entryFileFileSystem
  */
-class PreviewModel{
+class PreviewModel extends Common.Object{
 
   constructor(){
+    super()
 
+    this._activePreviewSettings = {};
   }
 
   _assignBinding(event){
@@ -42,6 +44,8 @@ class PreviewModel{
     // to any file directly in root of the entryfile folder
     if(networkSourceCode.origin().includes('localhost:8081')){
 
+      console.log('PreviewModel: Network Resource', networkSourceCode)
+
       // get parent project for the selected entryFile
       const parentProject = this._activeUiSourceCode.project();
 
@@ -53,6 +57,7 @@ class PreviewModel{
       })
 
       if(foundMatchUiSource){
+        console.log('PreviewModel: Binding ', networkSourceCode, ' to ', foundMatchUiSource)
         Persistence.fileSystemMapping.addMappingForResource(
           networkSourceCode.url(),
           Persistence.FileSystemWorkspaceBinding.fileSystemPath(foundMatchUiSource.project().id()),
@@ -89,9 +94,19 @@ class PreviewModel{
       return project._id === 'jsSourceMaps::main';
     }).pop()
 
+
     // Add the filesystem - this will trigger all the panels to update to show the new
     // filesystem
     this._entryFileFileSystem = await Persistence.isolatedFileSystemManager._innerAddFileSystem(settingsFilesystem, true)
+    console.log('PreviewModel: Added settings filesystem', this._entryFileFileSystem)
+
+    const settingsFs = Workspace.workspace._projects.get(this._entryFileFileSystem.path())
+    this.activePreview = {
+      entryFile: uiSourceCode,
+      settings: settingsFs
+    }
+
+    this.dispatchEventToListeners('previewran', this.activePreview)
   }
 }
 

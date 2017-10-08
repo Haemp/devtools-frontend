@@ -37,9 +37,10 @@ Persistence.IsolatedFileSystem = class {
    * @param {string} path
    * @param {string} embedderPath
    */
-  constructor(manager, path, embedderPath) {
+  constructor(manager, path, embedderPath, name) {
     this._manager = manager;
     this._path = path;
+    this._name = name;
     this._embedderPath = embedderPath;
     this._excludedFoldersSetting = Common.settings.createLocalSetting('workspaceExcludedFolders', {});
     /** @type {!Set<string>} */
@@ -61,7 +62,7 @@ Persistence.IsolatedFileSystem = class {
    */
   static create(manager, path, embedderPath, name, rootURL) {
     // Create filesystem stubb
-    var fileSystem = new Persistence.IsolatedFileSystem(manager, path, embedderPath);
+    var fileSystem = new Persistence.IsolatedFileSystem(manager, path, embedderPath, name);
 
     // Populate filesystem inner values
     return fileSystem._initializeFilePaths(embedderPath)
@@ -169,7 +170,7 @@ Persistence.IsolatedFileSystem = class {
    * @param {string} path
    */
   deleteFile(path) {
-
+    Preview.ElectronFileSystemBackend.deleteFile(this._embedderPath + path)
   }
 
   /**

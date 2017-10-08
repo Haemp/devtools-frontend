@@ -67,15 +67,17 @@ Sources.SourcesPanel = class extends UI.Panel {
     this._innerPreviewSplitWidget = new UI.SplitWidget(false, true, 'innerPreviewSplitViewState', initialDebugSidebarWidth)
     this._previewSplitWidget.setSidebarWidget(this._innerPreviewSplitWidget);
 
-    // inside the innerPreviewSplit widget we will place the preview in the main
-    // frame and a tabbed pane in the second one.
+    // we need to nest another splitPanel widget for the console
+    this._consoleAndPreviewMain = new UI.SplitWidget(false, true, 'consoleAndPreview', initialDebugSidebarWidth)
     this._sourcesPreviewWidget = new Preview.PreviewSandbox();
-    this._innerPreviewSplitWidget.setMainWidget(this._sourcesPreviewWidget);
+    this._consoleAndPreviewMain.setMainWidget(this._sourcesPreviewWidget);
 
-    // create a source view for the settings files
-    // this should be a tabbed view
-    this._settingsSourcesView = new Elements.ElementsPanel();
-    this._innerPreviewSplitWidget.setSidebarWidget(this._settingsSourcesView)
+    this._consoleView = new Console.ConsoleView();
+    this._consoleAndPreviewMain.setSidebarWidget(this._consoleView);
+    this._innerPreviewSplitWidget.setMainWidget(this._consoleAndPreviewMain);
+
+    this._previewTools = new Preview.PreviewToolsPane()
+    this._innerPreviewSplitWidget.setSidebarWidget(this._previewTools)
 
     // _splitWidget -> Dual view with Debugger and sources
     this._splitWidget = new UI.SplitWidget(true, true, 'sourcesPanelSplitViewState', initialDebugSidebarWidth);

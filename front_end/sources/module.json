@@ -622,7 +622,6 @@
         "formatter",
         "preview",
         "elements"
-
     ],
     "scripts": [
         "AddSourceMapURLDialog.js",

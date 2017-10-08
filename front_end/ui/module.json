@@ -41,6 +41,7 @@
         "SoftContextMenu.js",
         "SoftDropDown.js",
         "SplitWidget.js",
+        "Tabbed.js",
         "TextPrompt.js",
         "ThrottledWidget.js",
         "Toolbar.js",

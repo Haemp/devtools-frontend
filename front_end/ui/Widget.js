@@ -575,6 +575,7 @@ UI.Widget._originalRemoveChildren = Element.prototype.removeChildren;
 
 /**
  * @unrestricted
+ * @unrestricted
  */
 UI.VBox = class extends UI.Widget {
   /**
@@ -685,7 +686,7 @@ UI.WidgetFocusRestorer = class {
 };
 
 /**
- * @override
+ * @o'verride
  * @param {?Node} child
  * @return {?Node}
  * @suppress {duplicate}
