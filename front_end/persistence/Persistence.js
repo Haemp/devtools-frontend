@@ -47,6 +47,7 @@ Persistence.Persistence = class extends Common.Object {
    * @param {!Persistence.PersistenceBinding} binding
    */
   _validateBinding(binding) {
+    console.log('Persistence: Binding Created', binding)
     if (!Runtime.experiments.isEnabled('persistence2') || binding.network.contentType().isFromSourceMap() ||
         !binding.fileSystem.contentType().isTextType()) {
       this._establishBinding(binding);
@@ -92,6 +93,7 @@ Persistence.Persistence = class extends Common.Object {
    * @param {!Persistence.PersistenceBinding} binding
    */
   _establishBinding(binding) {
+    console.log('Persitence: Establishing binding', binding)
     binding.network[Persistence.Persistence._binding] = binding;
     binding.fileSystem[Persistence.Persistence._binding] = binding;
 
@@ -119,6 +121,7 @@ Persistence.Persistence = class extends Common.Object {
    * @param {!Persistence.PersistenceBinding} binding
    */
   _onBindingRemoved(binding) {
+    console.log('Persitence: Binding is being removed', binding)
     binding._removed = true;
     if (binding.network[Persistence.Persistence._binding] !== binding)
       return;
@@ -150,6 +153,7 @@ Persistence.Persistence = class extends Common.Object {
    * @param {!Common.Event} event
    */
   _onWorkingCopyChanged(event) {
+    console.log('Persitence: Working Copy changed', event.data)
     var uiSourceCode = /** @type {!Workspace.UISourceCode} */ (event.data);
     var binding = uiSourceCode[Persistence.Persistence._binding];
     if (!binding || binding[Persistence.Persistence._muteWorkingCopy])

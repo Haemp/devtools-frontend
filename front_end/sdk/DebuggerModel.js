@@ -147,7 +147,8 @@ SDK.DebuggerModel = class extends SDK.SDKModel {
       clearTimeout(this._skipAllPausesTimeout);
       delete this._skipAllPausesTimeout;
     }
-    this._agent.setSkipAllPauses(skip);
+
+    this._agent.setSkipAllPauses({skip: skip});
   }
 
   /**
@@ -201,8 +202,9 @@ SDK.DebuggerModel = class extends SDK.SDKModel {
   }
 
   pause() {
+    console.log('DebuggerModel: Pausing');
     this._isPausing = true;
-    this._skipAllPauses(false);
+    //this._skipAllPauses(false);
     this._agent.pause();
   }
 
@@ -240,6 +242,7 @@ SDK.DebuggerModel = class extends SDK.SDKModel {
     if (!callback)
       return;
     var locations = (response.locations || []).map(payload => SDK.DebuggerModel.Location.fromPayload(this, payload));
+    console.log('DebuggerModel: Added breakpoint', response.breakpointId);
     callback(response[Protocol.Error] ? null : response.breakpointId, locations);
   }
 
@@ -256,6 +259,7 @@ SDK.DebuggerModel = class extends SDK.SDKModel {
         callback(null, []);
         return;
       }
+      console.log('DebuggerModel: Added breakpoint', response.breakpointId);
       callback(response.breakpointId, [SDK.DebuggerModel.Location.fromPayload(this, response.actualLocation)]);
     });
   }
@@ -266,6 +270,7 @@ SDK.DebuggerModel = class extends SDK.SDKModel {
    */
   async removeBreakpoint(breakpointId) {
     var response = await this._agent.invoke_removeBreakpoint({breakpointId});
+    console.log('DebuggerModel: Removed breakpoint', breakpointId);
     if (response[Protocol.Error])
       console.error('Failed to remove breakpoint: ' + response[Protocol.Error]);
   }
@@ -279,6 +284,7 @@ SDK.DebuggerModel = class extends SDK.SDKModel {
   async getPossibleBreakpoints(startLocation, endLocation, restrictToFunction) {
     var response = await this._agent.invoke_getPossibleBreakpoints(
         {start: startLocation.payload(), end: endLocation.payload(), restrictToFunction: restrictToFunction});
+    console.log('DebuggerModel: Possible Breakpoints', response);
     if (response[Protocol.Error] || !response.locations)
       return [];
     return response.locations.map(location => SDK.DebuggerModel.BreakLocation.fromPayload(this, location));
@@ -289,6 +295,7 @@ SDK.DebuggerModel = class extends SDK.SDKModel {
    * @param {!Protocol.Debugger.Location} location
    */
   _breakpointResolved(breakpointId, location) {
+    console.log('DebuggerModel: Breakpoint resolved', breakpointId, location);
     this._breakpointResolvedEventTarget.dispatchEventToListeners(
         breakpointId, SDK.DebuggerModel.Location.fromPayload(this, location));
   }
@@ -356,6 +363,10 @@ SDK.DebuggerModel = class extends SDK.SDKModel {
   setScriptSource(scriptId, newSource, callback) {
     this._scripts.get(scriptId).editSource(
         newSource, this._didEditScriptSource.bind(this, scriptId, newSource, callback));
+  }
+
+  getScriptSource(scriptId){
+
   }
 
   /**
@@ -953,6 +964,7 @@ SDK.DebuggerDispatcher = class {
   scriptParsed(
       scriptId, sourceURL, startLine, startColumn, endLine, endColumn, executionContextId, hash,
       executionContextAuxData, isLiveEdit, sourceMapURL, hasSourceURL, isModule, length) {
+    
     this._debuggerModel._parsedScriptSource(
         scriptId, sourceURL, startLine, startColumn, endLine, endColumn, executionContextId, hash,
         executionContextAuxData, !!isLiveEdit, sourceMapURL, !!hasSourceURL, false, length || 0);

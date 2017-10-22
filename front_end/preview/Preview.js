@@ -31,7 +31,10 @@ class PreviewModel extends Common.Object{
     const networkSourceCode = event.data;
 
     // add binding for the main entry file
-    if(networkSourceCode.name() === this._activeUiSourceCode.name() && networkSourceCode.origin().includes('webpack://')){
+    if(networkSourceCode.name() === this._activeUiSourceCode.name()
+       && networkSourceCode.origin().includes('webpack://')
+       && !Persistence.fileSystemMapping.hasMappingForNetworkURL(networkSourceCode.url())
+    ){
       const baseEntryFileSystemPath = Persistence.FileSystemWorkspaceBinding.fileSystemPath(this._activeUiSourceCode.project().id())
       Persistence.fileSystemMapping.addMappingForResource(
         networkSourceCode.url(),
@@ -56,7 +59,7 @@ class PreviewModel extends Common.Object{
         return uiSource.name() === networkSourceCode.name()
       })
 
-      if(foundMatchUiSource){
+      if(foundMatchUiSource && !Persistence.fileSystemMapping.hasMappingForNetworkURL(foundMatchUiSource.url())){
         console.log('PreviewModel: Binding ', networkSourceCode, ' to ', foundMatchUiSource)
         Persistence.fileSystemMapping.addMappingForResource(
           networkSourceCode.url(),
@@ -90,10 +93,9 @@ class PreviewModel extends Common.Object{
 
     // find the project listing source maps - this is the one
     // that will contain the uiSourceCode for the compiled files
-    const networkProject = Workspace.workspace.projects().filter((project) => {
-      return project._id === 'jsSourceMaps::main';
-    }).pop()
-
+    // const networkProject = Workspace.workspace.projects().filter((project) => {
+    //   return project._id === 'jsSourceMaps::main';
+    // }).pop()
 
     // Add the filesystem - this will trigger all the panels to update to show the new
     // filesystem
@@ -108,6 +110,7 @@ class PreviewModel extends Common.Object{
 
     this.dispatchEventToListeners('previewran', this.activePreview)
   }
+
 }
 
 /** lets make this a singleton */
@@ -124,7 +127,12 @@ Preview.PreviewSandbox = class extends UI.Widget {
     super(true);
     console.log('Instantiating Sources.Preview');
 
-    this.contentElement.innerHTML = '<webview allowpopups disablewebsecurity style="position: absolute; width: 100%; height: 100%" src="http://localhost:8081" ondrop="return false;"></webview>';
+    this.contentElement.innerHTML = `
+        <webview allowpopups 
+                 disablewebsecurity 
+                 style="position: absolute; width: 100%; height: 100%"
+                 disableblinkfeatures="ReportingObserver"
+                 src="http://localhost:8081"></webview>`;
     this.$ = {
       container: this.contentElement.querySelector('webview')
     };
@@ -138,6 +146,16 @@ Preview.PreviewSandbox = class extends UI.Widget {
     document.addEventListener('builderror', (e) => {
       Common.console.addMessage(e.data, Common.Console.MessageLevel.Error)
     })
+
+    document.addEventListener('keydown', (event) => {
+      console.log('PreviewSandbox: Capturing refresh event')
+      if(event.key === 'r' && event.metaKey){
+        event.preventDefault();
+        event.stopImmediatePropagation()
+        //Preview.PreviewModel.runFile(Preview.PreviewModel._activeUiSourceCode)
+        this.refresh();
+      }
+    }, {capture: true})
   }
 
   /**
@@ -145,7 +163,9 @@ Preview.PreviewSandbox = class extends UI.Widget {
    */
   refresh() {
     console.log('Refresh triggered');
-    this.$.container.reload();
+    setTimeout(() => {
+      this.$.container.reload();
+    }, 2000)
   }
 };
 

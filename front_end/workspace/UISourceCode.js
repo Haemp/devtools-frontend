@@ -75,6 +75,10 @@ Workspace.UISourceCode = class extends Common.Object {
     this._workingCopy = null;
     /** @type {?function() : string} */
     this._workingCopyGetter = null;
+
+    this.breakpointsHasBeenResolved = new Promise((res, rej) => {
+      this.resolveBreakpoints = res;
+    })
   }
 
   /**

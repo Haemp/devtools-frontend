@@ -34,9 +34,10 @@
     }
 
     const {ipcRenderer} = require('electron')
-    ipcRenderer.on('sourcechange', () => {
+    ipcRenderer.on('sourcechange', (sender, compilationData) => {
       console.log('devtools.html: ipcRenderer incoming change');
       const evt = new Event('sourcechange');
+      evt.data = compilationData;
       document.dispatchEvent(evt);
     });
 

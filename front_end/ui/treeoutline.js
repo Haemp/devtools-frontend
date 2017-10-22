@@ -334,6 +334,7 @@ UI.TreeElement = class {
     this._titleElement = this._listItemNode.createChild('span', 'tree-element-title');
     this._listItemNode.treeElement = this;
     if (title){
+      if(typeof title === 'string')
       this._listItemNode.classList.add(title)
       this.title = title;
     }

@@ -266,7 +266,7 @@ Bindings.NetworkProject = class {
     return true;
   }
 
-  /**
+  /**w
    * @param {!Common.Event} event
    */
   _parsedScriptSource(event) {

@@ -3,11 +3,14 @@
     "components",
     "console",
     "workspace",
-    "common"
+    "common",
+    "sdk",
+    "bindings"
   ],
   "scripts": [
     "Preview.js",
     "PreviewModel.js",
-    "PreviewToolsPane.js"
+    "PreviewToolsPane.js",
+    "Interceptor.js"
   ]
 }

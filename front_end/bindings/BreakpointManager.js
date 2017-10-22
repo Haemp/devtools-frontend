@@ -124,42 +124,61 @@ Bindings.BreakpointManager = class extends Common.Object {
   }
 
   /**
+   *
    * @param {!Workspace.UISourceCode} uiSourceCode
+   * @return Promise
    */
   _restoreBreakpoints(uiSourceCode) {
-    var url = uiSourceCode.url();
-    if (!url)
-      return;
-
-    this._storage.mute();
-    var breakpointItems = this._storage.breakpointItems(url);
-    var provisionalBreakpoints = this._provisionalBreakpointsForURL(url);
-    for (var i = 0; i < breakpointItems.length; ++i) {
-      var breakpointItem = breakpointItems[i];
-      var itemStorageId = Bindings.BreakpointManager._breakpointStorageId(
-          breakpointItem.url, breakpointItem.lineNumber, breakpointItem.columnNumber);
-      var provisionalBreakpoint = provisionalBreakpoints.get(itemStorageId);
-      if (provisionalBreakpoint) {
-        if (!this._breakpointsForPrimaryUISourceCode.get(uiSourceCode))
-          this._breakpointsForPrimaryUISourceCode.set(uiSourceCode, []);
-        this._breakpointsForPrimaryUISourceCode.get(uiSourceCode).push(provisionalBreakpoint);
-        provisionalBreakpoint._updateBreakpoint();
-      } else {
-        this._innerSetBreakpoint(
-            uiSourceCode, breakpointItem.lineNumber, breakpointItem.columnNumber, breakpointItem.condition,
-            breakpointItem.enabled);
+    return new Promise((res, rej) => {
+      var url = uiSourceCode.url();
+      if (!url){
+        res();
+        return;
       }
-    }
-    this._provisionalBreakpoints.deleteAll(url);
-    this._storage.unmute();
+
+      this._storage.mute();
+      const breakpointPromises = [];
+      var breakpointItems = this._storage.breakpointItems(url);
+      var provisionalBreakpoints = this._provisionalBreakpointsForURL(url);
+      for (var i = 0; i < breakpointItems.length; ++i) {
+        var breakpointItem = breakpointItems[i];
+        var itemStorageId = Bindings.BreakpointManager._breakpointStorageId(
+            breakpointItem.url, breakpointItem.lineNumber, breakpointItem.columnNumber);
+        var provisionalBreakpoint = provisionalBreakpoints.get(itemStorageId);
+        if (provisionalBreakpoint) {
+          if (!this._breakpointsForPrimaryUISourceCode.get(uiSourceCode))
+            this._breakpointsForPrimaryUISourceCode.set(uiSourceCode, []);
+          this._breakpointsForPrimaryUISourceCode.get(uiSourceCode).push(provisionalBreakpoint);
+          console.log('Provisional Breakpoint set');
+          breakpointPromises.push(provisionalBreakpoint._updateBreakpoint());
+        } else {
+          const breakpoint = this._innerSetBreakpoint(
+              uiSourceCode, breakpointItem.lineNumber, breakpointItem.columnNumber, breakpointItem.condition,
+              breakpointItem.enabled);
+          console.log('Storage Breakpoint set');
+          breakpointPromises.push(breakpoint.isSetInDebugger())
+        }
+      }
+      this._provisionalBreakpoints.deleteAll(url);
+      this._storage.unmute();
+
+      return breakpointPromises.length > 0 ? res(Promise.all(breakpointPromises)) : res(Promise.resolve());
+    })
   }
 
   /**
    * @param {!Common.Event} event
    */
-  _uiSourceCodeAdded(event) {
+  async _uiSourceCodeAdded(event) {
     var uiSourceCode = /** @type {!Workspace.UISourceCode} */ (event.data);
-    this._restoreBreakpoints(uiSourceCode);
+
+    // copies all the breakpoints from the localstorage
+    // into the active debugger file
+    //await this._restoreBreakpoints(uiSourceCode)
+    this._restoreBreakpoints(uiSourceCode)
+    // console.log('BreakpointManager: breakpoints restored for file', uiSourceCode.url())
+    // uiSourceCode.resolveBreakpoints();
+    //this.dispatchEventToListeners(Bindings.BreakpointManager.Events.BreakpointsApplied, uiSourceCode)
   }
 
   /**
@@ -477,6 +496,7 @@ Bindings.BreakpointManager = class extends Common.Object {
 Bindings.BreakpointManager.Events = {
   BreakpointAdded: Symbol('breakpoint-added'),
   BreakpointRemoved: Symbol('breakpoint-removed'),
+  BreakpointsApplied: Symbol('breakpoints-applied'),
   BreakpointsActiveStateChanged: Symbol('BreakpointsActiveStateChanged')
 };
 
@@ -516,6 +536,18 @@ Bindings.BreakpointManager.Breakpoint = class {
     this._modelBreakpoints = new Map();
     this._updateState(condition, enabled);
     this._breakpointManager._targetManager.observeModels(SDK.DebuggerModel, this);
+    this._isInitiallySet = new Promise((res, rej) => {
+        this._resolveInitiallySet = res;
+    });
+  }
+
+  /**
+   * Check if the breakpoint has been propagated at least once to the
+   * debugger.
+   * @returns {Promise}
+   */
+  isSetInDebugger(){
+    return this._isInitiallySet;
   }
 
   /**
@@ -524,8 +556,13 @@ Bindings.BreakpointManager.Breakpoint = class {
    */
   modelAdded(debuggerModel) {
     var debuggerWorkspaceBinding = this._breakpointManager._debuggerWorkspaceBinding;
-    this._modelBreakpoints.set(
-        debuggerModel, new Bindings.BreakpointManager.ModelBreakpoint(debuggerModel, this, debuggerWorkspaceBinding));
+    const modelBreakpoint = new Bindings.BreakpointManager.ModelBreakpoint(debuggerModel, this, debuggerWorkspaceBinding)
+    modelBreakpoint.once(Bindings.BreakpointManager.ModelBreakpoint.Events.FINISHED_UPDATING).then(() => {
+      console.log('Breakpoint: Has finished updating breakpoint: ', this._breakpointStorageId())
+      this._resolveInitiallySet();
+    })
+
+    this._modelBreakpoints.set(debuggerModel, modelBreakpoint);
   }
 
   /**
@@ -649,12 +686,23 @@ Bindings.BreakpointManager.Breakpoint = class {
     this._updateBreakpoint();
   }
 
+  /**
+   *
+   * @returns {Promise.<*[]>}
+   * @private
+   */
   _updateBreakpoint() {
     this._removeFakeBreakpointAtPrimaryLocation();
     this._fakeBreakpointAtPrimaryLocation();
     var modelBreakpoints = this._modelBreakpoints.valuesArray();
+    const updatePromises = [];
     for (var i = 0; i < modelBreakpoints.length; ++i)
-      modelBreakpoints[i]._scheduleUpdateInDebugger();
+      updatePromises.push(modelBreakpoints[i]._scheduleUpdateInDebugger());
+
+    if(updatePromises.length > 0)
+      return Promise.all(updatePromises);
+    else
+      return Promise.resolve()
   }
 
   /**
@@ -719,13 +767,15 @@ Bindings.BreakpointManager.Breakpoint = class {
 /**
  * @unrestricted
  */
-Bindings.BreakpointManager.ModelBreakpoint = class {
+
+Bindings.BreakpointManager.ModelBreakpoint = class extends Common.Object {
   /**
    * @param {!SDK.DebuggerModel} debuggerModel
    * @param {!Bindings.BreakpointManager.Breakpoint} breakpoint
    * @param {!Bindings.DebuggerWorkspaceBinding} debuggerWorkspaceBinding
    */
   constructor(debuggerModel, breakpoint, debuggerWorkspaceBinding) {
+    super();
     this._debuggerModel = debuggerModel;
     this._breakpoint = breakpoint;
     this._debuggerWorkspaceBinding = debuggerWorkspaceBinding;
@@ -755,13 +805,18 @@ Bindings.BreakpointManager.ModelBreakpoint = class {
   }
 
   _scheduleUpdateInDebugger() {
-    if (this._isUpdating) {
-      this._hasPendingUpdate = true;
-      return;
-    }
+    return new Promise((res, rej) => {
+      if (this._isUpdating) {
+        this._hasPendingUpdate = true;
+        return;
+      }
 
-    this._isUpdating = true;
-    this._updateInDebugger(this._didUpdateInDebugger.bind(this));
+      this._isUpdating = true;
+      this._updateInDebugger(() => {
+        this._didUpdateInDebugger()
+        res();
+      });
+    })
   }
 
   _didUpdateInDebugger() {
@@ -769,6 +824,10 @@ Bindings.BreakpointManager.ModelBreakpoint = class {
     if (this._hasPendingUpdate) {
       this._hasPendingUpdate = false;
       this._scheduleUpdateInDebugger();
+    }else{
+
+      // @iron. Let objects know that this breakpoint now have been updated
+      this.dispatchEventToListeners(Bindings.BreakpointManager.ModelBreakpoint.Events.FINISHED_UPDATING, this._breakpoint);
     }
   }
 
@@ -845,7 +904,11 @@ Bindings.BreakpointManager.ModelBreakpoint = class {
     var updateCallback = this._didSetBreakpointInDebugger.bind(this, callback);
     if (newState.url) {
       this._debuggerModel.setBreakpointByURL(
-          newState.url, newState.lineNumber, newState.columnNumber, this._breakpoint.condition(), updateCallback);
+        newState.url,
+        newState.lineNumber,
+        newState.columnNumber,
+        this._breakpoint.condition(),
+        updateCallback);
     } else if (newState.scriptId) {
       this._debuggerModel.setBreakpointBySourceId(
           /** @type {!SDK.DebuggerModel.Location} */ (debuggerLocation), condition, updateCallback);
@@ -859,7 +922,7 @@ Bindings.BreakpointManager.ModelBreakpoint = class {
    * @param {?Protocol.Debugger.BreakpointId} breakpointId
    * @param {!Array.<!SDK.DebuggerModel.Location>} locations
    */
-  _didSetBreakpointInDebugger(callback, breakpointId, locations) {
+    _didSetBreakpointInDebugger(callback, breakpointId, locations) {
     if (this._cancelCallback) {
       this._cancelCallback = false;
       callback();
@@ -954,6 +1017,9 @@ Bindings.BreakpointManager.ModelBreakpoint = class {
         SDK.DebuggerModel.Events.DebuggerWasEnabled, this._scheduleUpdateInDebugger, this);
   }
 };
+Bindings.BreakpointManager.ModelBreakpoint.Events = {
+  FINISHED_UPDATING: 'FINISHED_UPDATING'
+}
 
 /**
  * @unrestricted

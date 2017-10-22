@@ -39,7 +39,8 @@ Bindings.LiveLocationWithPool = class {
    * @override
    */
   update() {
-    this._updateDelegate(this);
+    if(this._updateDelegate)
+      this._updateDelegate(this);
   }
 
   /**

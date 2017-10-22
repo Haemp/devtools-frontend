@@ -319,12 +319,33 @@ Sources.JavaScriptSourceFrame = class extends SourceFrame.UISourceCodeFrame {
    * @param {!Common.Event} event
    */
   _workingCopyCommitted(event) {
+    console.log('<JSF Working Copy Comitted>')
     this._scriptsPanel.updateLastModificationTime();
     if (this._supportsEnabledBreakpointsWhileEditing())
       return;
 
-    if (!this._scriptFileForDebuggerModel.size)
-      this._restoreBreakpointsAfterEditing();
+    if (!this._scriptFileForDebuggerModel.size){
+
+      // before we restore the breakpoints we need to update the sourcemap of
+      // this UISourceCode to make sure the mappings are correct.
+      document.addEventListener('sourcechange', async (evt) => {
+
+        // parse the actual data link from the sourcemapping notation
+        const sourceMap = evt.data.sourceMap.split('sourceMappingURL=')[1]
+
+        // now we have the new sourceMap raw data, create the map and
+        // replace the current UISourceCode sourceMap with it
+        const newSourceMap = await SDK.TextSourceMap.load(sourceMap);
+
+        // replace the old sourcemap - in a dirty way
+        this._debuggerSourceCode[Bindings.CompilerScriptMapping._sourceMapSymbol] = newSourceMap;
+
+        this._restoreBreakpointsAfterEditing();
+
+      }, {once: true})
+
+    }
+    console.log('</JSF Working Copy Comitted>')
   }
 
   _didMergeToVM() {
@@ -1585,6 +1606,24 @@ Sources.JavaScriptSourceFrame = class extends SourceFrame.UISourceCodeFrame {
 
     this._breakpointManager.setBreakpoint(this._debuggerSourceCode, lineNumber, columnNumber, condition, enabled);
     this._breakpointWasSetForTest(lineNumber, columnNumber, condition, enabled);
+
+    // @iron Fixing for issue related to missmatch between sourcemapped file
+    // and original uisource code
+    // Part of the new debugger routine involves always setting the breakpoints at
+    // the FS.UISourceCode
+    // if (Bindings.CompilerScriptMapping.uiLineHasMapping(this._debuggerSourceCode, lineNumber)){
+    //   targetUiSourceCode = this._debuggerSourceCode;
+    // }
+    //
+    // // @iron if we don't have a mapping for the debuggerSourceCode
+    // // we want to instead add back the breakpoints to the
+    // // original UiSourceCode
+    // // Bindings.CompilerScriptMapping.uiLineHasMapping(this.uiSourceCode(), lineNumber)){
+    // //    const targetUiSourceCode =
+    // // }
+    //
+    // this._breakpointManager.setBreakpoint(this.uiSourceCode(), lineNumber, columnNumber, condition, enabled);
+    // this._breakpointWasSetForTest(lineNumber, columnNumber, condition, enabled);
   }
 
   /**
