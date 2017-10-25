@@ -328,21 +328,45 @@ Sources.JavaScriptSourceFrame = class extends SourceFrame.UISourceCodeFrame {
 
       // before we restore the breakpoints we need to update the sourcemap of
       // this UISourceCode to make sure the mappings are correct.
-      document.addEventListener('sourcechange', async (evt) => {
+      // document.addEventListener('sourcechange', async (evt) => {
+      //
+      //   // parse the actual data link from the sourcemapping notation
+      //   const sourceMap = evt.data.sourceMap.split('sourceMappingURL=')[1]
+      //
+      //   // now we have the new sourceMap raw data, create the map and
+      //   // replace the current UISourceCode sourceMap with it
+      //   const newSourceMap = await SDK.TextSourceMap.load(sourceMap);
+      //
+      //   // replace the old sourcemap - in a dirty way
+      //   /** @type TextSourceMap */
+      //   const oldSourceMap = this._debuggerSourceCode[Bindings.CompilerScriptMapping._sourceMapSymbol];
+      //   this._debuggerSourceCode[Bindings.CompilerScriptMapping._sourceMapSymbol] = newSourceMap;
+      //
+      //   // update the client registry
+      //   const target = SDK.targetManager._targets[0];
+      //   const debuggerModel = target._modelByConstructor.get(SDK.DebuggerModel);
+      //   const script = debuggerModel.sourceMapManager()._sourceMapURLToClients.get(oldSourceMap.url()).valuesArray().pop()
+      //
+      //   // To handle the uiLocation -> rawLocation conversion we need the new
+      //   // sourcemap to point to the script.
+      //   // It doesn't matter that this is not the right script as it is only used for
+      //   // a lookup key - nothing checks that the content of the scritp is correct.
+      //   debuggerModel.sourceMapManager()._sourceMapURLToClients.set(newSourceMap.url(), script);
+      //
+      //   debuggerModel.sourceMapManager()._sourceMapByURL.set(newSourceMap.url(), newSourceMap);
+      //
+      //   // to handle the reverse mapping of script -> url that is used to
+      //   // normalize locations
+      //   debuggerModel.sourceMapManager()._resolvedSourceMapURL.set(script, newSourceMap.url());
+      //
+      //   window.$newSourceMap = newSourceMap;
+      //   window.$oldSourceMap = oldSourceMap;
+      //   window.$script = script;
 
-        // parse the actual data link from the sourcemapping notation
-        const sourceMap = evt.data.sourceMap.split('sourceMappingURL=')[1]
-
-        // now we have the new sourceMap raw data, create the map and
-        // replace the current UISourceCode sourceMap with it
-        const newSourceMap = await SDK.TextSourceMap.load(sourceMap);
-
-        // replace the old sourcemap - in a dirty way
-        this._debuggerSourceCode[Bindings.CompilerScriptMapping._sourceMapSymbol] = newSourceMap;
 
         this._restoreBreakpointsAfterEditing();
 
-      }, {once: true})
+      // }, {once: true})
 
     }
     console.log('</JSF Working Copy Comitted>')
@@ -1601,8 +1625,18 @@ Sources.JavaScriptSourceFrame = class extends SourceFrame.UISourceCodeFrame {
    * @param {boolean} enabled
    */
   _setBreakpoint(lineNumber, columnNumber, condition, enabled) {
-    if (!Bindings.CompilerScriptMapping.uiLineHasMapping(this._debuggerSourceCode, lineNumber))
+    if (!Bindings.CompilerScriptMapping.uiLineHasMapping(this._debuggerSourceCode, lineNumber)){
+      this._breakpointManager._storage._breakpoints[this._debuggerSourceCode.url() + ':' + lineNumber + ':' + columnNumber] = new Bindings.BreakpointManager.Storage.Item({
+        projectId: this._debuggerSourceCode.project().id(),
+        _url: this._debuggerSourceCode.url(),
+        lineNumber: _ => lineNumber,
+        columnNumber: _ => columnNumber,
+        condition: _ => condition,
+        enabled: _ => enabled
+      });
+      this._breakpointManager._storage._save();
       return;
+    }
 
     this._breakpointManager.setBreakpoint(this._debuggerSourceCode, lineNumber, columnNumber, condition, enabled);
     this._breakpointWasSetForTest(lineNumber, columnNumber, condition, enabled);

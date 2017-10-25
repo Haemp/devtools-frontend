@@ -75,9 +75,13 @@ Workspace.UISourceCode = class extends Common.Object {
     this._workingCopy = null;
     /** @type {?function() : string} */
     this._workingCopyGetter = null;
+    this.breakpointsInitiated = false;
 
-    this.breakpointsHasBeenResolved = new Promise((res, rej) => {
-      this.resolveBreakpoints = res;
+    this.breakpointsHasBeenInitiatedPromise = new Promise((fullfill) => {
+      this.setBreakpointsInitiated = () => {
+        this.breakpointsInitiated = true;
+        fullfill()
+      }
     })
   }
 

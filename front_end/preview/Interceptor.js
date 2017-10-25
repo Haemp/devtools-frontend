@@ -1,100 +1,103 @@
+/**
+ * @description
+ * What the hell does this thing do?
+ * - Applies breakpoints for scripts being loaded in
+ * - Resumes
+ */
 class Interceptor{
 
   constructor(){
 
-    // we need to get ahold of the dbugger
-    // target first of all
-    // SDK.targetManager.addEventListener(
-    //   SDK.TargetManager.Events.InspectedURLChanged, this._inspectedURLChanged, this
-    // );
-  }
+    Promise.all([
+      this.getDebuggerModel(),
+      this.getDOMDebuggerModel()
+    ]).then((models) => {
+      const [debuggerModel, domDebuggerModel] = models;
 
-  _inspectedURLChanged(event){
+      // setup stop on first line
+      const scriptProcessing = [];
+      domDebuggerModel._agent.setInstrumentationBreakpoint("scriptFirstStatement");
+      SDK.targetManager.addModelListener(SDK.DebuggerModel, SDK.DebuggerModel.Events.DebuggerPaused, async (event) => {
 
-    console.log('Interceptor: Inspect URL Changed', event.data);
-    if(!event.data.inspectedURL().includes('http://localhost:8081'))
-      return;
+        // data associated to the pause is located in
+        // the debuggerModel
+        /** @type {SDK.DebuggerModel} */
+        const debuggerModel = event.data;
+        const details = debuggerModel.debuggerPausedDetails();
 
-    this._target = event.data;
-    this._breakpointManager = Bindings.breakpointManager;
-    this._debuggerModel = this._target.model(SDK.DebuggerModel);
-    this._workspace = this._breakpointManager._workspace;
-    // when a source mapp attaches - we
-    //this._debuggerModel.sourceMapManager().addEventListener(SDK.SourceMapManager.Events.SourceMapAttached, /** @param {{data: {SDK.Script}}} event */(event) => {
-    this._workspace.addEventListener(Workspace.Workspace.Events.UISourceCodeAdded, async (event) => {
+        // first check if this is a legit first script breakpoint
+        if(details.reason !== "EventListener"){
+          return // IT IS! Better gtfo out of here and let it do its thing.
+        }
 
-      // we pause the debugger to set the breakpoints
-      // before the execution of the script
-      /** @type Workspace.UISourceCode */
-      const uiSourceCode = event.data;
+        this.breakpointSettingMode = true;
 
-      console.log('Interceptor: Pausing debugger for script: ', uiSourceCode.url(), ', Pausing.');
-      this._debuggerModel.pause();
-      await uiSourceCode.breakpointsHasBeenResolved;
-      this._debuggerModel.resume();
-      console.log('Interceptor: All breakpoints resolved: ', uiSourceCode.url(), ', Resuming.');
+        // now we figure out what script this BP has hit
+        const script = details.callFrames[0].script;
 
-      // Case: we have a bundle file without a breakpoint.
-      // really what we need is to wait until the UISourceCode has been processed
+        console.log('Interceptor: Waiting for script', script.sourceURL, ' ...');
+        await script.allUISourceCodeLoadedPromise;
+        console.log('Interceptor: Script Processed: ', script.sourceURL);
 
-      // Case: We refresh a file - we will eventually have a state where the debugger file
-      // has a breakpoint via setByUrl.
-      // Solution: We need to make sure that these are cleaned out properly.
+        // get the main sourcecode for the script
+        const mainUISourceCode = script[Bindings.DefaultScriptMapping._uiSourceCodeSymbol];
 
-      // we wait till we know the breakpoints have been
-      // applied, and then resume.
-      // this._breakpointManager.once(Bindings.BreakpointManager.Events.BreakpointsApplied).then( /** @param Workspace.UISourceCode uiSourceCode */(uiSourceCode) => {
-      //
-      //   console.log('Interceptor: Breakpoint for processed. Scope: ', scriptUrl, ', UISourceCode: ', uiSourceCode.url());
-      //   if(uiSourceCode.url().includes(scriptUrl)){
-      //     console.log('Interceptor: Debugger resumed');
-      //     this._debuggerModel.resume();
-      //   }
-      // });
+        // If there are SourceMaps we will also have those files associated with the script
+        const sourceMappedUISourceCodes = script.associatedUISourceCodes.valuesArray();
 
+        const uiSourceCodes = sourceMappedUISourceCodes.concat(mainUISourceCode);
+        await Promise.all(uiSourceCodes.map(uiSourceCode => uiSourceCode.breakpointsHasBeenInitiatedPromise))
+
+        script.allInitialBreakpointsSet = true;
+
+        this.breakpointSettingMode = false;
+
+        // Everything is resolved - we can now resume the debugger for
+        // the next script in line
+        debuggerModel.resume();
+      })
     });
   }
 
-  _inspectedURLChanged2(event){
-    console.log('Interceptor: Inspect URL Changed', event.data);
-    if(!event.data.inspectedURL().includes('http://localhost:8081'))
-      return;
-
-    this._target = event.data;
-    this._breakpointManager = Bindings.breakpointManager;
-
-    // we now have the debugger target, now we
-    // start listening to the debugger model for new
-    // files.
-    this._debuggerModel = this._target.model(SDK.DebuggerModel);
-    this._debuggerModel.addEventListener(SDK.DebuggerModel.Events.ParsedScriptSource, /** @param {{data: {SDK.Script}}} event */(event) => {
-      const scriptUrl = event.data.sourceURL;
-
-      // we pause the debugger to set the breakpoints
-      // before the execution of the script
-      console.log('Interceptor: Pausing debugger for script', scriptUrl);
-      this._debuggerModel.pause();
-
-      // Case: we have a bundle file without a breakpoint.
-      // really what we need is to wait until the UISourceCode has been processed
-
-      // Case: We refresh a file - we will eventually have a state where the debugger file
-      // has a breakpoint via setByUrl.
-      // Solution: We need to make sure that these are cleaned out properly.
-
-      // we wait till we know the breakpoints have been
-      // applied, and then resume.
-      this._breakpointManager.once(Bindings.BreakpointManager.Events.BreakpointsApplied).then( /** @param Workspace.UISourceCode uiSourceCode */(uiSourceCode) => {
-
-        console.log('Interceptor: Breakpoint for processed. Scope: ', scriptUrl, ', UISourceCode: ', uiSourceCode.url());
-        if(uiSourceCode.url().includes(scriptUrl)){
-          console.log('Interceptor: Debugger resumed');
-          this._debuggerModel.resume();
+  getDebuggerModel(){
+    return new Promise((res, rej) => {
+      SDK.targetManager.observeModels(SDK.DebuggerModel, {
+        modelAdded: (model) => {
+          res(model)
         }
       });
-
-    });
+    })
   }
+
+  getDOMDebuggerModel(){
+    return new Promise((res, rej) => {
+      SDK.targetManager.observeModels(SDK.DOMDebuggerModel, {
+        modelAdded: (model) => {
+          res(model)
+        }
+      });
+    })
+  }
+
+
+  // Case: we have a bundle file without a breakpoint.
+  // really what we need is to wait until the UISourceCode has been processed
+
+  // Case: We refresh a file - we will eventually have a state where the debugger file
+  // has a breakpoint via setByUrl.
+  // Solution: We need to make sure that these are cleaned out properly.
+
+  // we wait till we know the breakpoints have been
+  // applied, and then resume.
+  // this._breakpointManager.once(Bindings.BreakpointManager.Events.BreakpointsApplied).then( /** @param Workspace.UISourceCode uiSourceCode */(uiSourceCode) => {
+  //
+  //   console.log('Interceptor: Breakpoint for processed. Scope: ', scriptUrl, ', UISourceCode: ', uiSourceCode.url());
+  //   if(uiSourceCode.url().includes(scriptUrl)){
+  //     console.log('Interceptor: Debugger resumed');
+  //     this._debuggerModel.resume();
+  //   }
+  // });
+
 }
 
-Preview.Interceptor = new Interceptor();
+Preview.interceptor = new Interceptor();

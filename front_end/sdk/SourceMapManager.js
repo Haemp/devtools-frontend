@@ -141,7 +141,11 @@ SDK.SourceMapManager = class extends Common.Object {
     if (!this._sourceMapURLToLoadingClients.has(sourceMapURL)) {
       SDK.TextSourceMap.load(sourceMapURL, sourceURL)
           .then(onTextSourceMapLoaded.bind(this, sourceMapURL))
-          .then(onSourceMap.bind(this, sourceMapURL));
+          .then(onSourceMap.bind(this, sourceMapURL))
+          .then(() => {
+            if(client instanceof SDK.Script)
+              client.setAsProcessed();
+          });
     }
     this._sourceMapURLToLoadingClients.set(sourceMapURL, client);
 

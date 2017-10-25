@@ -274,6 +274,9 @@ Bindings.CompilerScriptMapping = class {
           typeof embeddedContent === 'string' ? new Workspace.UISourceCodeMetadata(null, embeddedContent.length) : null;
       uiSourceCode = project.createUISourceCode(sourceURL, contentProvider.contentType());
       uiSourceCode[Bindings.CompilerScriptMapping._sourceMapSymbol] = sourceMap;
+
+      // @iron: this is used in the new breakpoint application routine
+      script.associatedUISourceCodes.add(uiSourceCode);
       Bindings.NetworkProject.setInitialFrameAttribution(uiSourceCode, frameId);
       project.addUISourceCodeWithProvider(uiSourceCode, contentProvider, metadata, mimeType);
     }

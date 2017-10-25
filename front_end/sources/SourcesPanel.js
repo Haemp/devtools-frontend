@@ -72,7 +72,7 @@ Sources.SourcesPanel = class extends UI.Panel {
     this._sourcesPreviewWidget = new Preview.PreviewSandbox();
     this._consoleAndPreviewMain.setMainWidget(this._sourcesPreviewWidget);
 
-    this._consoleView = new Console.ConsoleView();
+    this._consoleView = new Console.ConsolePanel();
     this._consoleAndPreviewMain.setSidebarWidget(this._consoleView);
     this._innerPreviewSplitWidget.setMainWidget(this._consoleAndPreviewMain);
 
@@ -463,6 +463,20 @@ Sources.SourcesPanel = class extends UI.Panel {
     this._sourcesView.setExecutionLocation(uiLocation);
     if (window.performance.now() - this._lastModificationTime < Sources.SourcesPanel._lastModificationTimeout)
       return;
+
+    // @iron: if the location is associated with a VM entity
+    // it does not have a real script attached. We shouldn't reveal it
+    if(Preview.interceptor.breakpointSettingMode)
+      return;
+
+    // @iron: We don't want to auto reveal the bundle file.
+    // This is necessary because we are pausing each script
+    // before we set the breakpoints and without this line
+    // this causes the bundle file to be highlighted.
+    // if(liveLocation.uiLocation().uiSourceCode.url().includes("http://localhost:8081/bundle.js"))
+    //   return;
+
+
     this._sourcesView.showSourceLocation(
         uiLocation.uiSourceCode, uiLocation.lineNumber, uiLocation.columnNumber, undefined, true);
   }

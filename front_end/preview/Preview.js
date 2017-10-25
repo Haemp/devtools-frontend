@@ -130,7 +130,7 @@ Preview.PreviewSandbox = class extends UI.Widget {
     this.contentElement.innerHTML = `
         <webview allowpopups 
                  disablewebsecurity 
-                 style="position: absolute; width: 100%; height: 100%"
+                 style="position: absolute; width: 100%; height: 100%; background-color: white;"
                  disableblinkfeatures="ReportingObserver"
                  src="http://localhost:8081"></webview>`;
     this.$ = {
@@ -163,9 +163,7 @@ Preview.PreviewSandbox = class extends UI.Widget {
    */
   refresh() {
     console.log('Refresh triggered');
-    setTimeout(() => {
-      this.$.container.reload();
-    }, 2000)
+    this.$.container.reload();
   }
 };
 

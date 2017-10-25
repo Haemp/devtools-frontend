@@ -62,8 +62,19 @@ SDK.Script = class {
     this.sourceMapURL = sourceMapURL;
     this.hasSourceURL = hasSourceURL;
     this.contentLength = length;
+    this.associatedUISourceCodes = new Set();
     this._originalContentProvider = null;
     this._originalSource = null;
+    this.allUISourceCodeLoaded = false;
+    this.allInitialBreakpointsSet = false;
+    this.setAsProcessed = () => {};
+    this.allUISourceCodeLoadedPromise = new Promise((fullfill) => {
+      this.setAsProcessed = () => {
+        this.allUISourceCodeLoaded = true;
+        fullfill();
+      }
+    })
+
   }
 
   /**

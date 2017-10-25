@@ -205,7 +205,7 @@ SDK.DebuggerModel = class extends SDK.SDKModel {
     console.log('DebuggerModel: Pausing');
     this._isPausing = true;
     //this._skipAllPauses(false);
-    this._agent.pause();
+    return this._agent.pause();
   }
 
   /**
@@ -526,6 +526,12 @@ SDK.DebuggerModel = class extends SDK.SDKModel {
     if (isDiscardable) {
       this._discardableScripts.push(script);
       this._collectDiscardedScripts();
+    }
+
+    // @iron: We don't want to resolve the script if we're still waiting for
+    // the sourcemap
+    if(!sourceMapId){
+      script.setAsProcessed();
     }
     return script;
   }
@@ -964,7 +970,7 @@ SDK.DebuggerDispatcher = class {
   scriptParsed(
       scriptId, sourceURL, startLine, startColumn, endLine, endColumn, executionContextId, hash,
       executionContextAuxData, isLiveEdit, sourceMapURL, hasSourceURL, isModule, length) {
-    
+
     this._debuggerModel._parsedScriptSource(
         scriptId, sourceURL, startLine, startColumn, endLine, endColumn, executionContextId, hash,
         executionContextAuxData, !!isLiveEdit, sourceMapURL, !!hasSourceURL, false, length || 0);
