@@ -320,10 +320,14 @@ Sources.SourcesPanel = class extends UI.Panel {
     if (!this._paused)
       this._setAsCurrentPanel();
 
-    if (UI.context.flavor(SDK.Target) === debuggerModel.target())
+    if(details.reason === 'EventListener')
+      return;
+
+    if (UI.context.flavor(SDK.Target) === debuggerModel.target()){
       this._showDebuggerPausedDetails(/** @type {!SDK.DebuggerPausedDetails} */ (details));
-    else if (!this._paused)
+    }else if (!this._paused){
       UI.context.setFlavor(SDK.Target, debuggerModel.target());
+    }
   }
 
   /**
@@ -1201,11 +1205,16 @@ Sources.SourcesPanel.DebuggerLocationRevealer = class {
    * @return {!Promise}
    */
   reveal(rawLocation, omitFocus) {
+
     if (!(rawLocation instanceof SDK.DebuggerModel.Location))
       return Promise.reject(new Error('Internal error: not a debugger location'));
     var uiLocation = Bindings.debuggerWorkspaceBinding.rawLocationToUILocation(rawLocation);
     if (!uiLocation)
       return Promise.resolve();
+
+    if(Preview.interceptor.breakpointSettingMode)
+      return Promise.resolve();
+
     Sources.SourcesPanel.instance().showUILocation(uiLocation, omitFocus);
     return Promise.resolve();
   }

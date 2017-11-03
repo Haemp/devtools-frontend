@@ -130,8 +130,11 @@ Preview.PreviewSandbox = class extends UI.Widget {
     this.contentElement.innerHTML = `
         <webview allowpopups 
                  disablewebsecurity 
+                 nodeIntegration
+                 plugins
                  style="position: absolute; width: 100%; height: 100%; background-color: white;"
                  disableblinkfeatures="ReportingObserver"
+                 partition="iron2"
                  src="http://localhost:8081"></webview>`;
     this.$ = {
       container: this.contentElement.querySelector('webview')

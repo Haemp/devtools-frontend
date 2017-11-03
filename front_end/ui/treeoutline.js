@@ -334,8 +334,14 @@ UI.TreeElement = class {
     this._titleElement = this._listItemNode.createChild('span', 'tree-element-title');
     this._listItemNode.treeElement = this;
     if (title){
-      if(typeof title === 'string')
-      this._listItemNode.classList.add(title)
+
+      if(typeof title === 'string'){
+        // clean up title
+        const cleanTitle = title.replace(/[^a-zA-Z0-9\-]/g, '');
+        if(cleanTitle)
+          this._listItemNode.classList.add(cleanTitle)
+      }
+
       this.title = title;
     }
     this._listItemNode.addEventListener('mousedown', this._handleMouseDown.bind(this), false);

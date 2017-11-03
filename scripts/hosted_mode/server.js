@@ -9,7 +9,10 @@ var parseURL = require('url').parse;
 console.log('Chromium path is', process.env.CHROMIUM_COMMIT);
 var utils = require('../utils');
 
-const CHROMIUM_COMMIT = "a106f0abbf69dad349d4aaf4bcc4f5d376dd2377"
+// chrome 59: a106f0abbf69dad349d4aaf4bcc4f5d376dd2377
+// chrome 60: b6460e24cf59f429d69de255538d0fc7a425ccf9
+
+const CHROMIUM_COMMIT = "b6460e24cf59f429d69de255538d0fc7a425ccf9"
 
 const remoteDebuggingPort = parseInt(process.env.REMOTE_DEBUGGING_PORT, 10) || 9222;
 const serverPort = parseInt(process.env.PORT, 10) || 8090;
